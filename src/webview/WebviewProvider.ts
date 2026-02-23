@@ -15,6 +15,10 @@ export class WebviewProvider implements vscode.WebviewViewProvider {
     private readonly _extensionUri: vscode.Uri;
     private readonly _disposables: vscode.Disposable[] = [];
 
+    /** Callback hooks set by extension.ts to wire AgentLoop. */
+    public onUserMessage: ((text: string) => void) | undefined;
+    public onCancelRequested: (() => void) | undefined;
+
     constructor(private readonly _context: vscode.ExtensionContext) {
         this._extensionUri = _context.extensionUri;
     }
@@ -52,6 +56,18 @@ export class WebviewProvider implements vscode.WebviewViewProvider {
         // Create message router for this webview
         this._messageRouter = new MessageRouter(webviewView.webview);
         this._disposables.push(this._messageRouter);
+
+        // Wire MessageRouter events to extension callbacks
+        this._disposables.push(
+            this._messageRouter.onUserMessage((text) => {
+                this.onUserMessage?.(text);
+            })
+        );
+        this._disposables.push(
+            this._messageRouter.onCancelRequested(() => {
+                this.onCancelRequested?.();
+            })
+        );
 
         // Listen for state changes and forward to webview
         const stateManager = StateManager.instance;

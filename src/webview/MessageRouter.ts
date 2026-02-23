@@ -112,13 +112,12 @@ export class MessageRouter implements vscode.Disposable {
 
     /**
      * Handle user sending a chat message.
-     * Adds the user message to state, creates an assistant placeholder,
-     * and echoes back (stub until AgentLoop is integrated).
+     * Adds the user message to state and fires the event for AgentLoop.
      */
     private async _handleSendMessage(text: string): Promise<void> {
         const stateManager = StateManager.instance;
 
-        // Add user message
+        // Add user message to display state
         const userMessage: DisplayMessage = {
             id: _generateId(),
             role: 'user',
@@ -127,36 +126,8 @@ export class MessageRouter implements vscode.Disposable {
         };
         stateManager.addMessage(userMessage);
 
-        // Fire the event so an AgentLoop could pick it up
+        // Fire the event so the AgentLoop picks it up
         this._onUserMessage.fire(text);
-
-        // Set state to thinking
-        stateManager.setAgentState('thinking');
-
-        // --- STUB: Echo back until AgentLoop is connected ---
-        // Simulate a brief delay to mimic LLM processing
-        await _delay(200);
-
-        // Stream a chunk
-        this.postMessage({
-            type: 'streamChunk',
-            content: `Echo: ${text}`,
-        });
-
-        // Create assistant message
-        const assistantMessage: DisplayMessage = {
-            id: _generateId(),
-            role: 'assistant',
-            content: `Echo: ${text}`,
-            timestamp: Date.now(),
-        };
-        stateManager.addMessage(assistantMessage);
-
-        // End stream
-        this.postMessage({ type: 'streamEnd' });
-
-        // Return to idle
-        stateManager.setAgentState('idle');
     }
 
     /**
