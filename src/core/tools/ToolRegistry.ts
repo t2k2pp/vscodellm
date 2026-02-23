@@ -15,6 +15,18 @@ export class ToolRegistry {
         this.tools.set(tool.name, tool);
     }
 
+    /** Register multiple tools at once. */
+    registerAll(tools: Tool[]): void {
+        for (const tool of tools) {
+            this.tools.set(tool.name, tool);
+        }
+    }
+
+    /** Unregister a tool by name. Returns true if the tool existed. */
+    unregister(name: string): boolean {
+        return this.tools.delete(name);
+    }
+
     /** Get a tool by name. */
     get(name: string): Tool | undefined {
         return this.tools.get(name);
@@ -23,6 +35,11 @@ export class ToolRegistry {
     /** Get all registered tools. */
     getAll(): Tool[] {
         return Array.from(this.tools.values());
+    }
+
+    /** Get all registered tool names. */
+    getNames(): string[] {
+        return Array.from(this.tools.keys());
     }
 
     /** Get OpenAI-compatible tool definitions for native function calling. */

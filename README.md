@@ -6,6 +6,9 @@
 
 - **ローカル＆LAN対応** – クラウドAPIキー不要。ローカルマシンはもちろん、同一ネットワーク上の別マシンで動くLLMサーバーにも接続可能
 - **自律型エージェント** – ファイル読み書き、コマンド実行、検索を自動で判断・実行
+- **Skills対応** – SKILL.mdベースの再利用可能な手順を定義し、エージェントが自律的に呼び出し
+- **Sub-agents** – 複雑なタスクを子エージェントに分割して並行処理
+- **MCP (Model Context Protocol)** – 外部MCPサーバーのツールを動的に取り込み
 - **デュアルモードTool Calling** – ネイティブFunction Calling + XMLフォールバックで幅広いモデルに対応
 - **承認フロー** – ファイル変更やコマンド実行は差分表示付きで事前承認
 - **Markdownレンダリング** – コードブロック、ボールド、イタリックなどのリッチ表示
@@ -74,6 +77,70 @@ npm run package    # → local-llm-agent-0.1.0.vsix を生成
 | `list_files` | ディレクトリ内のファイル一覧 |
 | `ask_user` | ユーザーに質問 |
 | `task_complete` | タスク完了を報告 |
+| `invoke_skill` | 登録済みスキルを呼び出し |
+| `spawn_subagent` | 子エージェントを生成してサブタスクを実行（承認必要） |
+| MCP動的ツール | MCPサーバーから取得したツール（承認必要） |
+
+## Skills（スキル）
+
+SKILL.mdファイルでカスタム手順を定義し、エージェントが自律的に呼び出せます。
+
+### スキルの配置場所
+
+- `.localllm/skills/<スキル名>/SKILL.md` – プロジェクト固有
+- `.claude/skills/<スキル名>/SKILL.md` – Claude Code互換
+
+### SKILL.mdフォーマット
+
+```markdown
+---
+name: create-module
+description: TypeScriptモジュールとテストファイルを作成
+argument-hint: "[module-path] [type: class|interface]"
+allowed-tools: Read, Write, Glob, Grep
+---
+
+## Steps
+1. Read `CLAUDE.md` for conventions
+2. Create `$0.ts` with class/interface skeleton
+3. Create `$0.test.ts` with test template
+```
+
+- `$0`, `$1` はユーザー引数で自動展開
+- `allowed-tools` でスキル実行時に使用可能なツールを制限可能
+- ワークスペース内のスキルファイルを変更すると自動リロード
+
+## Sub-agents（子エージェント）
+
+複雑なタスクを子エージェントに分割できます。子エージェントは独立した会話コンテキストで動作し、完了時に結果を親に返します。
+
+- デフォルト最大イテレーション: 10（親の25より少ない）
+- ツールセットをフィルタ可能（読み取り専用サブタスク等）
+- 承認が必要（`spawn_subagent`ツール使用時）
+
+## MCP（Model Context Protocol）
+
+外部MCPサーバーのツールを動的に追加できます。
+
+### 設定ファイル: `.localllm/mcp.json`
+
+```json
+{
+  "servers": [
+    {
+      "name": "my-mcp-server",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/dir"]
+    }
+  ]
+}
+```
+
+- MCPサーバーは拡張機能起動時に自動で起動
+- ツール名は `サーバー名__ツール名` 形式で名前衝突を回避
+- 全MCPツールは承認必須（外部サーバーのため）
+- 現在対応: stdio トランスポート（SSEは今後対応）
 
 ## コンテキストメニュー
 
@@ -94,10 +161,12 @@ npm run package    # → local-llm-agent-0.1.0.vsix を生成
 ```
 src/
 ├── core/           # ビジネスロジック（VSCode API非依存）
-│   ├── agent/      # AgentLoop, StreamProcessor
+│   ├── agent/      # AgentLoop, StreamProcessor, SubAgentManager
 │   ├── context/    # ContextManager, ConversationHistory, FileContextProvider
 │   ├── llm/        # LlmProvider, OpenAiCompatibleProvider, backends/
+│   ├── mcp/        # McpClient, McpTransport, McpToolAdapter, McpServerManager
 │   ├── prompts/    # SystemPrompt, テンプレート
+│   ├── skills/     # SkillLoader, SkillRegistry, SkillExecutor
 │   └── tools/      # ToolRegistry, ToolExecutor, handlers/
 ├── security/       # ApprovalService, PathValidator, CommandSanitizer
 ├── services/       # VSCode APIラッパー（workspace, terminal, editor, ignore）
@@ -123,7 +192,7 @@ webview-ui/src/
 
 ```bash
 npm run dev           # watch モード（Extension + Webview）
-npm run test          # Vitest実行（64テスト）
+npm run test          # Vitest実行（138テスト）
 npm run build         # プロダクションビルド
 npm run lint          # ESLint
 npm run package       # VSIXパッケージ生成

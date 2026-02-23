@@ -57,3 +57,69 @@ export class LlmConnectionError extends Error {
         this.name = 'LlmConnectionError';
     }
 }
+
+// ============================================
+// Skills errors
+// ============================================
+
+export class SkillLoadError extends Error {
+    constructor(
+        public readonly skillName: string,
+        public readonly reason: string,
+    ) {
+        super(`Failed to load skill "${skillName}": ${reason}`);
+        this.name = 'SkillLoadError';
+    }
+}
+
+export class SkillExecutionError extends Error {
+    constructor(
+        public readonly skillName: string,
+        message: string,
+        public readonly cause?: Error,
+    ) {
+        super(`Skill "${skillName}" execution failed: ${message}`);
+        this.name = 'SkillExecutionError';
+    }
+}
+
+// ============================================
+// Sub-agent errors
+// ============================================
+
+export class SubAgentError extends Error {
+    constructor(
+        message: string,
+        public readonly cause?: Error,
+    ) {
+        super(`SubAgent error: ${message}`);
+        this.name = 'SubAgentError';
+    }
+}
+
+// ============================================
+// MCP errors
+// ============================================
+
+export class McpConnectionError extends Error {
+    constructor(
+        public readonly serverName: string,
+        message: string,
+        public readonly cause?: Error,
+    ) {
+        super(`MCP server "${serverName}" connection failed: ${message}`);
+        this.name = 'McpConnectionError';
+    }
+}
+
+export class McpToolError extends Error {
+    constructor(
+        public readonly serverName: string,
+        public readonly toolName: string,
+        message: string,
+        public readonly cause?: Error,
+    ) {
+        super(`MCP tool "${serverName}/${toolName}" failed: ${message}`);
+        this.name = 'McpToolError';
+    }
+}

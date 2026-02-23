@@ -29,6 +29,7 @@ export class AgentLoop {
     private state: TaskState = TaskState.IDLE;
     private abortController: AbortController | null = null;
     private iterationCount = 0;
+    private lastAssistantText = '';
 
     private readonly provider;
     private readonly toolExecutor;
@@ -62,10 +63,12 @@ export class AgentLoop {
 
     /**
      * Run the agent loop with a user message.
+     * Returns the final assistant text response (useful for sub-agents).
      */
-    async run(userMessage: string): Promise<void> {
+    async run(userMessage: string): Promise<string> {
         this.abortController = new AbortController();
         this.iterationCount = 0;
+        this.lastAssistantText = '';
 
         // Add user message to conversation history
         this.conversationHistory.addMessage({ role: 'user', content: userMessage });
@@ -82,6 +85,8 @@ export class AgentLoop {
                 logger.error('Agent loop error', error);
             }
         }
+
+        return this.lastAssistantText;
     }
 
     /**
@@ -96,6 +101,13 @@ export class AgentLoop {
      */
     getState(): TaskState {
         return this.state;
+    }
+
+    /**
+     * Get the number of iterations completed.
+     */
+    getIterationCount(): number {
+        return this.iterationCount;
     }
 
     // ============================================
@@ -120,6 +132,9 @@ export class AgentLoop {
             const { textContent, toolCalls } = await this.streamCompletion(messages);
 
             // Step 4: Add assistant response to history
+            if (textContent) {
+                this.lastAssistantText = textContent;
+            }
             const assistantMessage: ChatMessage = {
                 role: 'assistant',
                 content: textContent || null,

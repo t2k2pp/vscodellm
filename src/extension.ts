@@ -24,11 +24,22 @@ import { SearchFilesTool } from './core/tools/handlers/SearchFilesTool.js';
 import { ListFilesTool } from './core/tools/handlers/ListFilesTool.js';
 import { AskUserTool } from './core/tools/handlers/AskUserTool.js';
 import { TaskCompleteTool } from './core/tools/handlers/TaskCompleteTool.js';
+import { InvokeSkillTool } from './core/tools/handlers/InvokeSkillTool.js';
+import { SubAgentTool } from './core/tools/handlers/SubAgentTool.js';
+import { loadAll as loadAllSkills } from './core/skills/SkillLoader.js';
+import { SkillRegistry } from './core/skills/SkillRegistry.js';
+import { SubAgentManager } from './core/agent/SubAgentManager.js';
+import { McpServerManager } from './core/mcp/McpServerManager.js';
 import { setOutputChannel } from './utils/logger.js';
 import type { DisplayMessage, AgentState } from './types/messages.js';
 
 // Current agent loop instance (one at a time)
 let activeAgentLoop: AgentLoop | null = null;
+
+// Shared instances for skills, sub-agents, and MCP
+let skillRegistry: SkillRegistry | null = null;
+let subAgentManager: SubAgentManager | null = null;
+let mcpServerManager: McpServerManager | null = null;
 
 /**
  * Called when the extension is activated.
@@ -91,6 +102,51 @@ export function activate(context: vscode.ExtensionContext): void {
     toolRegistry.register(new AskUserTool());
     toolRegistry.register(new TaskCompleteTool());
 
+    // ============================================
+    // 5a. Skills system
+    // ============================================
+    skillRegistry = new SkillRegistry();
+    if (workspaceRoot) {
+        const skills = loadAllSkills(workspaceRoot);
+        skillRegistry.registerAll(skills);
+    }
+    // Register invoke_skill tool (always, even if no skills loaded yet)
+    toolRegistry.register(new InvokeSkillTool(skillRegistry));
+
+    // Watch for skill file changes and reload
+    if (workspaceRoot) {
+        const skillWatcher = vscode.workspace.createFileSystemWatcher(
+            new vscode.RelativePattern(workspaceRoot, '{.localllm,.claude}/skills/*/SKILL.md'),
+        );
+        const reloadSkills = () => {
+            const skills = loadAllSkills(workspaceRoot);
+            skillRegistry!.clear();
+            skillRegistry!.registerAll(skills);
+        };
+        skillWatcher.onDidCreate(reloadSkills);
+        skillWatcher.onDidChange(reloadSkills);
+        skillWatcher.onDidDelete(reloadSkills);
+        context.subscriptions.push(skillWatcher);
+    }
+
+    // ============================================
+    // 5b. Sub-agent manager
+    // ============================================
+    subAgentManager = new SubAgentManager();
+
+    // ============================================
+    // 5c. MCP server manager
+    // ============================================
+    mcpServerManager = new McpServerManager();
+    mcpServerManager.setToolRegistry(toolRegistry);
+    if (workspaceRoot) {
+        // Start MCP servers asynchronously (don't block activation)
+        void mcpServerManager.startAll(workspaceRoot).catch((err) => {
+            // eslint-disable-next-line no-console
+            console.error('Failed to start MCP servers:', err);
+        });
+    }
+
     const toolValidator = new ToolValidator();
     const toolExecutor = new ToolExecutor(toolRegistry, toolValidator);
 
@@ -127,11 +183,12 @@ export function activate(context: vscode.ExtensionContext): void {
             return;
         }
 
-        // Build system prompt
+        // Build system prompt (with skills list)
         const systemPrompt = new SystemPrompt(toolRegistry);
         const systemPromptText = systemPrompt.build({
             workspaceRoot,
             useXmlTools: !settings.agent.preferNativeToolCalling,
+            skills: skillRegistry?.getAll(),
         });
 
         // Create context manager for this run
@@ -221,8 +278,8 @@ export function activate(context: vscode.ExtensionContext): void {
             },
         };
 
-        // Create and run agent loop
-        activeAgentLoop = new AgentLoop({
+        // Build agent loop dependencies
+        const agentDeps = {
             provider,
             toolExecutor,
             toolRegistry,
@@ -241,7 +298,15 @@ export function activate(context: vscode.ExtensionContext): void {
             onStreamChunk,
             onToolCall,
             onError,
-        });
+        };
+
+        // Register spawn_subagent tool (needs deps for sub-agent spawning)
+        // Unregister first to avoid duplicates across runs
+        toolRegistry.unregister('spawn_subagent');
+        toolRegistry.register(new SubAgentTool(subAgentManager!, agentDeps));
+
+        // Create and run agent loop
+        activeAgentLoop = new AgentLoop(agentDeps);
 
         void activeAgentLoop.run(userMessage);
     }
@@ -378,4 +443,14 @@ export function activate(context: vscode.ExtensionContext): void {
 export function deactivate(): void {
     activeAgentLoop?.cancel();
     activeAgentLoop = null;
+
+    // Cancel any running sub-agents
+    subAgentManager?.cancelAll();
+    subAgentManager = null;
+
+    // Stop all MCP servers
+    void mcpServerManager?.stopAll();
+    mcpServerManager = null;
+
+    skillRegistry = null;
 }

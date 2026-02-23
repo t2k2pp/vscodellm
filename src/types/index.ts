@@ -14,3 +14,12 @@ export type {
 } from './messages.js';
 
 export { getDefaultSettings } from './messages.js';
+
+export type {
+    SkillDefinition,
+    SkillInvocation,
+    SubAgentRequest,
+    SubAgentResult,
+    McpServerConfig,
+    McpToolInfo,
+} from './skills.js';
