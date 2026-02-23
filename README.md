@@ -81,6 +81,43 @@ npm run package    # → local-llm-agent-0.1.0.vsix を生成
 | `spawn_subagent` | 子エージェントを生成してサブタスクを実行（承認必要） |
 | MCP動的ツール | MCPサーバーから取得したツール（承認必要） |
 
+## プロジェクトルール
+
+ワークスペースにルールファイルを配置すると、エージェントが自動でシステムプロンプトに取り込みます。プロジェクト固有のコーディング規約、アーキテクチャルール、禁止事項などを定義できます。
+
+### 対応ファイル（優先順）
+
+| ファイル | 説明 |
+|---------|------|
+| `.localllm/rules.md` | **推奨** – 本拡張固有のルールファイル |
+| `CLAUDE.md` | Claude Code互換 |
+| `.clinerules` | Cline互換 |
+| `.cursorrules` | Cursor互換 |
+| `.github/copilot-instructions.md` | GitHub Copilot互換 |
+
+- 複数のファイルが存在する場合、すべて読み込まれます（上記順序で連結）
+- 最大64KBまで読み込み（超過分は切り捨て）
+- ルールファイルの内容はシステムプロンプト内で「プロジェクトルール」として明示され、エージェントの一般ルールより優先されます
+
+### 使用例: `.localllm/rules.md`
+
+```markdown
+# プロジェクトルール
+
+## コーディング規約
+- TypeScriptを使用する
+- テストファイルはソースの隣に配置（例: Foo.ts → Foo.test.ts）
+- インターフェースにI接頭辞を使わない
+
+## アーキテクチャ
+- src/core/ は VSCode API 非依存にする
+- 非同期処理は async/await を使用
+
+## 禁止事項
+- console.log を本番コードに残さない
+- any 型を使わない
+```
+
 ## Skills（スキル）
 
 SKILL.mdファイルでカスタム手順を定義し、エージェントが自律的に呼び出せます。
@@ -192,7 +229,7 @@ webview-ui/src/
 
 ```bash
 npm run dev           # watch モード（Extension + Webview）
-npm run test          # Vitest実行（138テスト）
+npm run test          # Vitest実行（152テスト）
 npm run build         # プロダクションビルド
 npm run lint          # ESLint
 npm run package       # VSIXパッケージ生成

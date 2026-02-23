@@ -30,6 +30,7 @@ import { loadAll as loadAllSkills } from './core/skills/SkillLoader.js';
 import { SkillRegistry } from './core/skills/SkillRegistry.js';
 import { SubAgentManager } from './core/agent/SubAgentManager.js';
 import { McpServerManager } from './core/mcp/McpServerManager.js';
+import { loadAndBuildRulesSection } from './core/prompts/RulesLoader.js';
 import { setOutputChannel } from './utils/logger.js';
 import type { DisplayMessage, AgentState } from './types/messages.js';
 
@@ -183,12 +184,14 @@ export function activate(context: vscode.ExtensionContext): void {
             return;
         }
 
-        // Build system prompt (with skills list)
+        // Build system prompt (with project rules and skills list)
+        const projectRules = workspaceRoot ? loadAndBuildRulesSection(workspaceRoot) : '';
         const systemPrompt = new SystemPrompt(toolRegistry);
         const systemPromptText = systemPrompt.build({
             workspaceRoot,
             useXmlTools: !settings.agent.preferNativeToolCalling,
             skills: skillRegistry?.getAll(),
+            projectRules: projectRules || undefined,
         });
 
         // Create context manager for this run

@@ -39,8 +39,14 @@ export class SystemPrompt {
         workspaceRoot: string;
         useXmlTools?: boolean;
         skills?: SkillDefinition[];
+        projectRules?: string;
     }): string {
         let prompt = this.baseTemplate.replace('{{workspaceRoot}}', options.workspaceRoot);
+
+        // Append project rules (from .localllm/rules.md, CLAUDE.md, etc.)
+        if (options.projectRules) {
+            prompt += '\n\n' + options.projectRules;
+        }
 
         // Append tool descriptions for XML fallback mode
         if (options.useXmlTools) {
