@@ -1,16 +1,45 @@
-.vscode/**
-.vscode-test/**
+# ============================================================
+# .vscodeignore – files excluded from the VSIX package
+# ============================================================
+
+# Source files (only dist/ is needed at runtime)
 src/**
 webview-ui/src/**
 webview-ui/node_modules/**
+webview-ui/package.json
+webview-ui/package-lock.json
+webview-ui/tsconfig.json
+webview-ui/tsconfig.node.json
+webview-ui/vite.config.ts
+webview-ui/index.html
 test/**
 docs/**
+
+# Config & tooling
 .claude/**
-node_modules/**
-.eslintrc.json
-.prettierrc
+.vscode/**
+.vscode-test/**
+.git/**
+.github/**
+.gitignore
+.eslintrc*
+.prettierrc*
 tsconfig.json
-vitest.config.ts
+tsconfig.node.json
 esbuild.mjs
+vitest.config.*
+CLAUDE.md
+
+# Dependencies (bundled by esbuild/vite)
+node_modules/**
+
+# Development artifacts
 *.map
 **/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/__tests__/**
+
+# OS files
+.DS_Store
+Thumbs.db

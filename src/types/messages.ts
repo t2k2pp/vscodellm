@@ -36,7 +36,8 @@ export type ExtensionToWebviewMessage =
     | { type: 'connectionStatus'; connected: boolean; error?: string }
     | { type: 'modelList'; models: ModelListItem[] }
     | { type: 'syncState'; state: SyncableState }
-    | { type: 'messageAdded'; message: DisplayMessage };
+    | { type: 'messageAdded'; message: DisplayMessage }
+    | { type: 'tokenUsage'; usage: TokenUsageInfo };
 
 // ============================================
 // Shared Types
@@ -100,6 +101,14 @@ export interface SyncableState {
     isConnected: boolean;
     activeModel: string | null;
     conversations: ConversationSummary[];
+}
+
+export interface TokenUsageInfo {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    contextBudget: number;
+    contextUsedPercent: number;
 }
 
 // ============================================

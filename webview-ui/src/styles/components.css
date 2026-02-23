@@ -390,3 +390,40 @@
 .btn.btn-primary:hover:not(:disabled) {
     background-color: var(--vscode-button-hoverBackground);
 }
+
+/* ---- token usage display --------------------------------- */
+
+.token-usage {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 12px;
+    border-top: 1px solid var(--vscode-widget-border, rgba(128,128,128,0.15));
+    background-color: var(--vscode-editor-background);
+    flex-shrink: 0;
+}
+
+.token-usage-bar {
+    height: 3px;
+    background-color: var(--vscode-widget-border, rgba(128,128,128,0.2));
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.token-usage-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.token-usage-text {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: var(--vscode-descriptionForeground);
+}
+
+.token-usage-percent {
+    opacity: 0.7;
+}

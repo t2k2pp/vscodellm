@@ -16,6 +16,7 @@ import type {
     ModelListItem,
     ConversationSummary,
     ToolCallDisplay,
+    TokenUsageInfo,
 } from './types';
 import { getDefaultSettings } from './types';
 
@@ -32,6 +33,7 @@ export interface AppStore {
     models: ModelListItem[];
     conversations: ConversationSummary[];
     errorMessage: string | null;
+    tokenUsage: TokenUsageInfo | null;
 
     // Streaming accumulator – the content collected while a stream is in
     // progress.  It is folded into the last assistant message on streamEnd.
@@ -64,6 +66,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     models: [],
     conversations: [],
     errorMessage: null,
+    tokenUsage: null,
     _streamingContent: '',
 
     // ---- actions -------------------------------------------------------
@@ -218,6 +221,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
             // ---------- single message push ------------------------------
             case 'messageAdded':
                 set((s) => ({ messages: [...s.messages, msg.message] }));
+                break;
+
+            // ---------- token usage --------------------------------------
+            case 'tokenUsage':
+                set({ tokenUsage: msg.usage });
                 break;
 
             default:

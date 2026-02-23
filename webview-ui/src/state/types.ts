@@ -195,7 +195,20 @@ export type ExtensionToWebviewMessage =
     | { type: 'connectionStatus'; connected: boolean; error?: string }
     | { type: 'modelList'; models: ModelListItem[] }
     | { type: 'syncState'; state: SyncableState }
-    | { type: 'messageAdded'; message: DisplayMessage };
+    | { type: 'messageAdded'; message: DisplayMessage }
+    | { type: 'tokenUsage'; usage: TokenUsageInfo };
+
+// ============================================
+// Token usage
+// ============================================
+
+export interface TokenUsageInfo {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    contextBudget: number;
+    contextUsedPercent: number;
+}
 
 // ============================================
 // Pending approval (UI-side representation)

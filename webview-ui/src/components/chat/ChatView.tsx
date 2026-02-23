@@ -1,8 +1,8 @@
 /**
  * ChatView – main chat container.
  *
- * Composes the message list, an optional approval dialog, and the input
- * area into a full-height flex column.
+ * Composes the message list, an optional approval dialog, token usage display,
+ * and the input area into a full-height flex column.
  */
 
 import React from 'react';
@@ -10,6 +10,7 @@ import { useAppStore } from '../../state/store';
 import { useMessages } from '../../hooks/useMessages';
 import { MessageList } from './MessageList';
 import { InputArea } from './InputArea';
+import { TokenUsageDisplay } from './TokenUsageDisplay';
 import { ApprovalDialog } from '../approval/ApprovalDialog';
 
 export const ChatView: React.FC = () => {
@@ -22,6 +23,7 @@ export const ChatView: React.FC = () => {
         <div className="chat-view">
             <MessageList messages={messages} />
             {pendingApproval && <ApprovalDialog approval={pendingApproval} />}
+            <TokenUsageDisplay />
             <InputArea
                 onSend={sendMessage}
                 onCancel={cancelTask}
