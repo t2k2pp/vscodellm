@@ -16,6 +16,9 @@ import type { LlmProvider } from './LlmProvider.js';
 import type { BackendAdapter, ModelInfo, ProviderConfig } from './types.js';
 import { OpenAiCompatibleProvider } from './OpenAiCompatibleProvider.js';
 import { OllamaBackend } from './backends/OllamaBackend.js';
+import { LmStudioBackend } from './backends/LmStudioBackend.js';
+import { LlamaCppBackend } from './backends/LlamaCppBackend.js';
+import { VllmBackend } from './backends/VllmBackend.js';
 import { GenericBackend } from './backends/GenericBackend.js';
 
 export class ProviderRegistry {
@@ -185,22 +188,13 @@ export class ProviderRegistry {
                 return new OllamaBackend();
 
             case 'lmstudio':
-                // LM Studio is highly OpenAI-compatible, use generic for now.
-                // A dedicated LmStudioBackend can be added later for
-                // model path normalization and strict tool calling support.
-                return new GenericBackend();
+                return new LmStudioBackend();
 
             case 'llamacpp':
-                // llama.cpp server uses OpenAI-compatible API.
-                // A dedicated LlamaCppBackend can be added later for
-                // guided decoding and grammar-based tool calling.
-                return new GenericBackend();
+                return new LlamaCppBackend();
 
             case 'vllm':
-                // vLLM uses OpenAI-compatible API with some differences
-                // in tool calling (only named function calling).
-                // A dedicated VllmBackend can be added later.
-                return new GenericBackend();
+                return new VllmBackend();
 
             case 'generic':
             default:

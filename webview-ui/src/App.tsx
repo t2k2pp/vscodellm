@@ -10,6 +10,7 @@ import React, { useState } from 'react';
 import { useExtensionState } from './hooks/useExtensionState';
 import { ChatView } from './components/chat/ChatView';
 import { SettingsView } from './components/settings/SettingsView';
+import { HistoryView } from './components/history/HistoryView';
 import { useAppStore } from './state/store';
 
 // ---- tab definition -------------------------------------------------------
@@ -27,15 +28,6 @@ const tabs: TabDef[] = [
     { id: 'history', label: 'History', icon: 'codicon-history' },
     { id: 'settings', label: 'Settings', icon: 'codicon-gear' },
 ];
-
-// ---- placeholder views (History is Phase 2+) ------------------------------
-
-const HistoryPlaceholder: React.FC = () => (
-    <div className="placeholder-view">
-        <i className="codicon codicon-history" />
-        <span>Conversation history will appear here.</span>
-    </div>
-);
 
 // SettingsView is now a full component in components/settings/SettingsView.tsx
 
@@ -118,7 +110,7 @@ export function App() {
             {/* Active view */}
             <div className="app-content">
                 {activeTab === 'chat' && <ChatView />}
-                {activeTab === 'history' && <HistoryPlaceholder />}
+                {activeTab === 'history' && <HistoryView />}
                 {activeTab === 'settings' && <SettingsView />}
             </div>
         </div>

@@ -2,15 +2,17 @@
  * MessageBubble – displays a single chat message.
  *
  * - Role indicator (You / Agent / System)
- * - Message content (plain text; Markdown rendering deferred to Phase 6)
+ * - Message content with Markdown rendering for assistant messages
  * - Timestamp
- * - List of tool calls, if any
+ * - Expandable tool call display
  * - Streaming cursor when `message.streaming` is true
  */
 
 import React from 'react';
 import type { DisplayMessage } from '../../state/types';
 import { StreamingMessage } from './StreamingMessage';
+import { ToolCallDisplay } from './ToolCallDisplay';
+import { Markdown } from '../common/Markdown';
 
 interface MessageBubbleProps {
     message: DisplayMessage;
@@ -34,19 +36,6 @@ function formatTime(ts: number): string {
     return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 }
 
-function toolCallIcon(status: string): string {
-    switch (status) {
-        case 'running':
-            return 'codicon-loading codicon-modifier-spin';
-        case 'completed':
-            return 'codicon-check';
-        case 'failed':
-            return 'codicon-error';
-        default:
-            return 'codicon-circle-outline';
-    }
-}
-
 // ---- component -------------------------------------------------------------
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
@@ -65,24 +54,15 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
             {/* content */}
             {streaming ? (
                 <StreamingMessage content={content} />
+            ) : role === 'assistant' ? (
+                <Markdown content={content} />
             ) : (
                 <div className="message-content">{content}</div>
             )}
 
             {/* tool calls */}
             {toolCalls && toolCalls.length > 0 && (
-                <div className="tool-calls">
-                    {toolCalls.map((tc) => (
-                        <div
-                            key={tc.id}
-                            className={`tool-call-item tool-call-item--${tc.status}`}
-                        >
-                            <i className={`codicon ${toolCallIcon(tc.status)}`} />
-                            <span className="tool-call-name">{tc.name}</span>
-                            <span className="tool-call-status">{tc.status}</span>
-                        </div>
-                    ))}
-                </div>
+                <ToolCallDisplay toolCalls={toolCalls} />
             )}
         </div>
     );
