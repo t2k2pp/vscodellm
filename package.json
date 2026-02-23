@@ -5,6 +5,10 @@
     "version": "0.1.0",
     "publisher": "local-llm-agent",
     "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/t2k2pp/vscodellm.git"
+    },
     "engines": {
         "vscode": "^1.85.0"
     },
