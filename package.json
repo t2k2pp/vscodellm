@@ -1,0 +1,195 @@
+{
+    "name": "local-llm-agent",
+    "displayName": "Local LLM Agent",
+    "description": "Autonomous AI coding assistant powered by local LLMs (Ollama, LM Studio, llama.cpp, vLLM)",
+    "version": "0.1.0",
+    "publisher": "local-llm-agent",
+    "license": "MIT",
+    "engines": {
+        "vscode": "^1.85.0"
+    },
+    "categories": [
+        "AI",
+        "Programming Languages",
+        "Other"
+    ],
+    "keywords": [
+        "ai",
+        "llm",
+        "ollama",
+        "coding assistant",
+        "local ai",
+        "copilot",
+        "agent"
+    ],
+    "activationEvents": [
+        "onStartupFinished"
+    ],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "local-llm-agent",
+                    "title": "Local LLM Agent",
+                    "icon": "resources/icon.svg"
+                }
+            ]
+        },
+        "views": {
+            "local-llm-agent": [
+                {
+                    "type": "webview",
+                    "id": "localLlmAgent.chatView",
+                    "name": "Chat",
+                    "contextualTitle": "Local LLM Agent"
+                }
+            ]
+        },
+        "commands": [
+            {
+                "command": "localLlmAgent.newChat",
+                "title": "New Chat",
+                "icon": "$(add)",
+                "category": "Local LLM Agent"
+            },
+            {
+                "command": "localLlmAgent.cancelTask",
+                "title": "Cancel Current Task",
+                "icon": "$(debug-stop)",
+                "category": "Local LLM Agent"
+            },
+            {
+                "command": "localLlmAgent.openSettings",
+                "title": "Open Settings",
+                "icon": "$(gear)",
+                "category": "Local LLM Agent"
+            },
+            {
+                "command": "localLlmAgent.explainSelection",
+                "title": "Explain Selected Code",
+                "category": "Local LLM Agent"
+            },
+            {
+                "command": "localLlmAgent.refactorSelection",
+                "title": "Refactor Selected Code",
+                "category": "Local LLM Agent"
+            }
+        ],
+        "menus": {
+            "view/title": [
+                {
+                    "command": "localLlmAgent.newChat",
+                    "when": "view == localLlmAgent.chatView",
+                    "group": "navigation"
+                }
+            ],
+            "editor/context": [
+                {
+                    "command": "localLlmAgent.explainSelection",
+                    "when": "editorHasSelection",
+                    "group": "localLlmAgent"
+                },
+                {
+                    "command": "localLlmAgent.refactorSelection",
+                    "when": "editorHasSelection",
+                    "group": "localLlmAgent"
+                }
+            ]
+        },
+        "configuration": {
+            "title": "Local LLM Agent",
+            "properties": {
+                "localLlmAgent.provider.backendType": {
+                    "type": "string",
+                    "enum": [
+                        "ollama",
+                        "lmstudio",
+                        "llamacpp",
+                        "vllm",
+                        "generic"
+                    ],
+                    "default": "ollama",
+                    "description": "Type of LLM backend server"
+                },
+                "localLlmAgent.provider.baseUrl": {
+                    "type": "string",
+                    "default": "http://localhost:11434",
+                    "description": "Base URL of the LLM server"
+                },
+                "localLlmAgent.provider.apiKey": {
+                    "type": "string",
+                    "default": "",
+                    "description": "API key (usually not needed for local servers)"
+                },
+                "localLlmAgent.provider.modelId": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Model identifier to use"
+                },
+                "localLlmAgent.agent.maxIterations": {
+                    "type": "number",
+                    "default": 25,
+                    "minimum": 1,
+                    "maximum": 100,
+                    "description": "Maximum agent loop iterations per task"
+                },
+                "localLlmAgent.agent.temperature": {
+                    "type": "number",
+                    "default": 0.0,
+                    "minimum": 0.0,
+                    "maximum": 2.0,
+                    "description": "LLM temperature for responses"
+                },
+                "localLlmAgent.approval.autoApproveWrites": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Automatically approve file write operations"
+                },
+                "localLlmAgent.approval.autoApproveCommands": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Automatically approve command executions"
+                }
+            }
+        },
+        "keybindings": [
+            {
+                "command": "localLlmAgent.newChat",
+                "key": "ctrl+shift+l",
+                "mac": "cmd+shift+l"
+            }
+        ]
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run build",
+        "build": "npm run build:extension && npm run build:webview",
+        "build:extension": "node esbuild.mjs --production",
+        "build:webview": "cd webview-ui && npm run build",
+        "dev": "concurrently \"npm run dev:extension\" \"npm run dev:webview\"",
+        "dev:extension": "node esbuild.mjs --watch",
+        "dev:webview": "cd webview-ui && npm run dev",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "lint": "eslint src/ --ext .ts,.tsx",
+        "package": "vsce package"
+    },
+    "devDependencies": {
+        "@types/node": "^20.11.0",
+        "@types/vscode": "^1.85.0",
+        "@vscode/vsce": "^3.0.0",
+        "concurrently": "^8.2.0",
+        "esbuild": "^0.20.0",
+        "eslint": "^8.56.0",
+        "@typescript-eslint/eslint-plugin": "^7.0.0",
+        "@typescript-eslint/parser": "^7.0.0",
+        "prettier": "^3.2.0",
+        "typescript": "^5.3.0",
+        "vitest": "^1.2.0"
+    },
+    "dependencies": {
+        "diff": "^5.2.0",
+        "gpt-tokenizer": "^2.1.0",
+        "ignore": "^5.3.0"
+    }
+}

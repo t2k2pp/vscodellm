@@ -1,0 +1,169 @@
+/**
+ * Message protocol between Extension Host and Webview.
+ * All communication uses postMessage with these typed messages.
+ */
+
+// ============================================
+// Webview -> Extension Host
+// ============================================
+
+export type WebviewToExtensionMessage =
+    | { type: 'sendMessage'; text: string }
+    | { type: 'cancelTask' }
+    | { type: 'approveAction'; approvalId: string }
+    | { type: 'rejectAction'; approvalId: string }
+    | { type: 'updateSettings'; settings: Partial<ExtensionSettings> }
+    | { type: 'testConnection' }
+    | { type: 'listModels' }
+    | { type: 'loadConversation'; conversationId: string }
+    | { type: 'deleteConversation'; conversationId: string }
+    | { type: 'newConversation' }
+    | { type: 'getState' };
+
+// ============================================
+// Extension Host -> Webview
+// ============================================
+
+export type ExtensionToWebviewMessage =
+    | { type: 'streamChunk'; content: string }
+    | { type: 'streamEnd' }
+    | { type: 'stateChange'; state: AgentState }
+    | { type: 'toolCallStarted'; toolCall: ToolCallInfo }
+    | { type: 'toolCallCompleted'; toolCallId: string; result: string; success: boolean }
+    | { type: 'approvalRequired'; approval: ApprovalRequest }
+    | { type: 'approvalDismissed' }
+    | { type: 'error'; error: string }
+    | { type: 'connectionStatus'; connected: boolean; error?: string }
+    | { type: 'modelList'; models: ModelListItem[] }
+    | { type: 'syncState'; state: SyncableState }
+    | { type: 'messageAdded'; message: DisplayMessage };
+
+// ============================================
+// Shared Types
+// ============================================
+
+export type AgentState = 'idle' | 'thinking' | 'executing_tools' | 'waiting_approval' | 'error';
+
+export interface ApprovalRequest {
+    id: string;
+    type: 'file_edit' | 'file_write' | 'command_execution' | 'file_delete';
+    description: string;
+    details: {
+        path?: string;
+        diff?: string;
+        command?: string;
+        cwd?: string;
+    };
+}
+
+export interface ToolCallInfo {
+    id: string;
+    name: string;
+    arguments: Record<string, unknown>;
+}
+
+export interface DisplayMessage {
+    id: string;
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+    toolCalls?: ToolCallDisplay[];
+    timestamp: number;
+    streaming?: boolean;
+}
+
+export interface ToolCallDisplay {
+    id: string;
+    name: string;
+    arguments: string;
+    result?: string;
+    status: 'pending' | 'running' | 'completed' | 'failed';
+}
+
+export interface ModelListItem {
+    id: string;
+    name: string;
+    contextWindow?: number;
+}
+
+export interface ConversationSummary {
+    id: string;
+    title: string;
+    lastMessage: string;
+    timestamp: number;
+    messageCount: number;
+}
+
+export interface SyncableState {
+    messages: DisplayMessage[];
+    agentState: AgentState;
+    settings: ExtensionSettings;
+    isConnected: boolean;
+    activeModel: string | null;
+    conversations: ConversationSummary[];
+}
+
+// ============================================
+// Settings
+// ============================================
+
+export type BackendType = 'ollama' | 'lmstudio' | 'llamacpp' | 'vllm' | 'generic';
+
+export interface ExtensionSettings {
+    provider: {
+        id: string;
+        backendType: BackendType;
+        baseUrl: string;
+        apiKey: string;
+        modelId: string;
+    };
+    agent: {
+        maxIterations: number;
+        maxOutputTokens: number;
+        contextSafetyRatio: number;
+        temperature: number;
+        preferNativeToolCalling: boolean;
+    };
+    approval: {
+        autoApproveReads: boolean;
+        autoApproveWrites: boolean;
+        autoApproveCommands: boolean;
+        allowedCommands: string[];
+        blockedCommands: string[];
+    };
+    ui: {
+        showTokenCount: boolean;
+        showToolCalls: boolean;
+        theme: 'auto' | 'dark' | 'light';
+    };
+}
+
+export function getDefaultSettings(): ExtensionSettings {
+    return {
+        provider: {
+            id: 'default',
+            backendType: 'ollama',
+            baseUrl: 'http://localhost:11434',
+            apiKey: '',
+            modelId: '',
+        },
+        agent: {
+            maxIterations: 25,
+            maxOutputTokens: 4096,
+            contextSafetyRatio: 0.8,
+            temperature: 0.0,
+            preferNativeToolCalling: true,
+        },
+        approval: {
+            autoApproveReads: true,
+            autoApproveWrites: false,
+            autoApproveCommands: false,
+            allowedCommands: [],
+            blockedCommands: ['rm -rf', 'format', 'mkfs', 'dd if='],
+        },
+        ui: {
+            showTokenCount: true,
+            showToolCalls: true,
+            theme: 'auto',
+        },
+    };
+}

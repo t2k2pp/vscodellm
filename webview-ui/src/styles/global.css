@@ -1,0 +1,205 @@
+/* ============================================================
+ * Global styles – VS Code webview reset & theme integration.
+ *
+ * All colours come from VS Code CSS custom properties so the
+ * webview automatically adapts to light/dark/high-contrast
+ * themes without any JavaScript.
+ * ============================================================ */
+
+/* ---- reset ------------------------------------------------ */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body,
+#root {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+}
+
+body {
+    font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+    font-size: var(--vscode-font-size, 13px);
+    font-weight: var(--vscode-font-weight, 400);
+    color: var(--vscode-editor-foreground);
+    background-color: var(--vscode-editor-background);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---- links ------------------------------------------------ */
+
+a {
+    color: var(--vscode-textLink-foreground);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--vscode-textLink-activeForeground);
+    text-decoration: underline;
+}
+
+/* ---- focus ring ------------------------------------------- */
+
+:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
+/* ---- scrollbar -------------------------------------------- */
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--vscode-scrollbarSlider-background);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--vscode-scrollbarSlider-hoverBackground);
+}
+
+::-webkit-scrollbar-thumb:active {
+    background: var(--vscode-scrollbarSlider-activeBackground);
+}
+
+::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* ---- utility --------------------------------------------- */
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+/* ---- button base ----------------------------------------- */
+
+button {
+    font-family: inherit;
+    font-size: inherit;
+    border: none;
+    cursor: pointer;
+    border-radius: 2px;
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* ---- primary button -------------------------------------- */
+
+.btn-primary {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    padding: 4px 12px;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+/* ---- secondary button ------------------------------------ */
+
+.btn-secondary {
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    padding: 4px 12px;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+/* ---- icon button ----------------------------------------- */
+
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    color: var(--vscode-editor-foreground);
+    border-radius: 4px;
+}
+
+.btn-icon:hover:not(:disabled) {
+    background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+/* ---- input base ------------------------------------------ */
+
+input,
+textarea {
+    font-family: inherit;
+    font-size: inherit;
+    background-color: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border, transparent);
+    border-radius: 2px;
+    padding: 4px 8px;
+    outline: none;
+}
+
+input:focus,
+textarea:focus {
+    border-color: var(--vscode-focusBorder);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--vscode-input-placeholderForeground);
+}
+
+/* ---- codicon font (injected by VS Code webview host) ----- */
+
+.codicon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+/* ---- badge / status indicator ---------------------------- */
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    background-color: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+}
+
+/* ---- separator ------------------------------------------- */
+
+.separator {
+    height: 1px;
+    background-color: var(--vscode-panel-border, var(--vscode-widget-border, rgba(128,128,128,0.2)));
+    margin: 4px 0;
+}
