@@ -56,9 +56,11 @@ local-llm-agent/
 │   │   │   │   ├── ExecuteCommandTool.ts
 │   │   │   │   ├── SearchFilesTool.ts
 │   │   │   │   ├── ListFilesTool.ts
-│   │   │   │   ├── RunTestsTool.ts
 │   │   │   │   ├── AskUserTool.ts
-│   │   │   │   └── TaskCompleteTool.ts
+│   │   │   │   ├── TaskCompleteTool.ts
+│   │   │   │   ├── InvokeSkillTool.ts          # スキル呼び出し
+│   │   │   │   ├── SubAgentTool.ts             # 子エージェント生成
+│   │   │   │   └── SearchConversationHistoryTool.ts  # トランスクリプト検索
 │   │   │   └── types.ts
 │   │   ├── diff/
 │   │   │   ├── DiffGenerator.ts       # 差分生成
@@ -71,14 +73,27 @@ local-llm-agent/
 │   │   │   ├── ContextCompactor.ts    # 自動圧縮ロジック
 │   │   │   ├── FileContextProvider.ts # ファイルコンテキスト取得
 │   │   │   ├── ConversationHistory.ts # 会話履歴管理
+│   │   │   ├── TranscriptLogger.ts    # JSONL会話トランスクリプト書き込み
+│   │   │   ├── TranscriptSearcher.ts  # トランスクリプト検索エンジン
 │   │   │   └── types.ts
-│   │   └── prompts/
-│   │       ├── SystemPrompt.ts        # システムプロンプト構築
-│   │       ├── ToolPrompts.ts         # XMLフォールバック用ツール記述
-│   │       └── templates/
-│   │           ├── system.md
-│   │           ├── tool-descriptions.md
-│   │           └── compaction.md
+│   │   ├── prompts/
+│   │   │   ├── SystemPrompt.ts        # システムプロンプト構築
+│   │   │   ├── RulesLoader.ts         # プロジェクトルールファイル読み込み
+│   │   │   ├── ToolPrompts.ts         # XMLフォールバック用ツール記述
+│   │   │   └── templates/
+│   │   │       ├── system.md
+│   │   │       ├── tool-descriptions.md
+│   │   │       └── compaction.md
+│   │   ├── skills/
+│   │   │   ├── SkillLoader.ts         # SKILL.mdファイル検出・パース
+│   │   │   ├── SkillRegistry.ts       # スキル登録・管理
+│   │   │   └── SkillExecutor.ts       # スキル実行（プレースホルダー展開）
+│   │   └── mcp/
+│   │       ├── McpClient.ts           # JSON-RPC 2.0クライアント
+│   │       ├── McpTransport.ts        # stdio/SSEトランスポート
+│   │       ├── McpToolAdapter.ts      # MCPツール→Tool変換
+│   │       ├── McpServerManager.ts    # MCPサーバーライフサイクル管理
+│   │       └── types.ts
 │   ├── services/                      # VSCode APIラッパー
 │   │   ├── workspace/
 │   │   │   ├── WorkspaceService.ts    # ファイル操作
@@ -115,6 +130,8 @@ local-llm-agent/
 │   └── types/
 │       ├── index.ts
 │       ├── messages.ts                # メッセージプロトコル型定義
+│       ├── skills.ts                  # Skills/SubAgent/MCP型定義
+│       ├── transcript.ts             # トランスクリプト型定義
 │       ├── settings.ts
 │       └── vscode.d.ts
 ├── webview-ui/                        # チャットUI（React / Vite）
@@ -211,13 +228,21 @@ extension.ts
         │       ├── WorkspaceService (services/workspace/)
         │       ├── TerminalService (services/terminal/)
         │       ├── EditorService (services/editor/)
-        │       └── IgnoreService (services/ignore/)
+        │       ├── IgnoreService (services/ignore/)
+        │       ├── SkillRegistry (core/skills/)
+        │       ├── SubAgentManager (core/agent/)
+        │       └── TranscriptSearcher (core/context/)
         ├── ContextManager (core/context/)
         │   ├── ContextCompactor
+        │   │   └── TranscriptLogger    # 圧縮イベント記録
         │   ├── FileContextProvider
         │   └── ConversationHistory
+        ├── TranscriptLogger (core/context/)  # 会話イベント記録
+        ├── SkillRegistry (core/skills/)
+        ├── McpServerManager (core/mcp/)
         ├── DiffApplier (core/diff/)
         ├── SystemPrompt (core/prompts/)
+        │   └── RulesLoader
         └── ApprovalService (security/)
 ```
 
@@ -417,9 +442,12 @@ export class AgentLoop {
 | `execute_command` | シェルコマンドを実行 | **必要** | `command`, `cwd?` |
 | `search_files` | テキストパターンを検索 | 不要 | `pattern`, `path?`, `filePattern?` |
 | `list_files` | ディレクトリ内のファイル一覧 | 不要 | `path`, `recursive?` |
-| `run_tests` | テストスイートを実行 | **必要** | `testCommand?`, `testFile?` |
 | `ask_user` | ユーザーに質問 | 不要 | `question` |
 | `task_complete` | タスク完了を通知 | 不要 | `summary` |
+| `invoke_skill` | 登録済みスキルを呼び出し | 不要 | `skill_name`, `arguments?` |
+| `spawn_subagent` | 子エージェントを生成 | **必要** | `prompt`, `allowedTools?`, `maxIterations?` |
+| `search_conversation_history` | 過去の会話トランスクリプトを検索 | 不要 | `query`, `conversation_id?`, `max_results?` |
+| MCP動的ツール | MCPサーバーから動的登録 | **必要** | サーバー定義による |
 
 ### 5.2 ツールインターフェース
 
@@ -488,6 +516,20 @@ export interface ToolResult {
 ### 6.4 ファイル読み取り重複排除
 
 同一ファイルの再読み取りを検出し、`[DUPLICATE FILE READ]`マーカーに置換してトークンを節約。
+
+### 6.5 会話トランスクリプト
+
+Auto-Compactionで失われた会話の詳細を復元可能にするための永続的ログ:
+
+- **TranscriptLogger**: AgentLoopの各イベント（ユーザーメッセージ、アシスタント応答、ツール呼び出し・結果、圧縮、エラー）をJSONL形式で `.localllm/transcripts/{conversationId}.jsonl` に逐次書き込み
+- **TranscriptSearcher**: JSONL内を正規表現で検索し、圧縮で消えた詳細を回復
+- **search_conversation_history ツール**: エージェント自身が過去の会話を検索できるツール。圧縮後のsummaryに検索ヒントが自動追記される
+
+```
+圧縮発動 → 古いメッセージがsummaryに置換
+         → summary末尾に「search_conversation_historyで詳細検索可能」と追記
+         → エージェントが詳細を必要とした場合、トランスクリプトから回復
+```
 
 ---
 

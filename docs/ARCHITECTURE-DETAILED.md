@@ -78,14 +78,27 @@ local-llm-agent/
 │   │   │   ├── ContextCompactor.ts    # Auto-compaction logic
 │   │   │   ├── FileContextProvider.ts # Workspace file context gathering
 │   │   │   ├── ConversationHistory.ts # Message history management
+│   │   │   ├── TranscriptLogger.ts    # JSONL conversation transcript writer
+│   │   │   ├── TranscriptSearcher.ts  # Transcript search engine
 │   │   │   └── types.ts
-│   │   └── prompts/
-│   │       ├── SystemPrompt.ts        # System prompt builder
-│   │       ├── ToolPrompts.ts         # Tool description prompts (XML fallback)
-│   │       └── templates/
-│   │           ├── system.md          # Main system prompt template
-│   │           ├── tool-descriptions.md
-│   │           └── compaction.md      # Compaction summary prompt
+│   │   ├── prompts/
+│   │   │   ├── SystemPrompt.ts        # System prompt builder
+│   │   │   ├── RulesLoader.ts         # Project rules file loader
+│   │   │   ├── ToolPrompts.ts         # Tool description prompts (XML fallback)
+│   │   │   └── templates/
+│   │   │       ├── system.md          # Main system prompt template
+│   │   │       ├── tool-descriptions.md
+│   │   │       └── compaction.md      # Compaction summary prompt
+│   │   ├── skills/
+│   │   │   ├── SkillLoader.ts         # SKILL.md file discovery and parsing
+│   │   │   ├── SkillRegistry.ts       # Skill registration and management
+│   │   │   └── SkillExecutor.ts       # Skill execution (placeholder expansion)
+│   │   └── mcp/
+│   │       ├── McpClient.ts           # JSON-RPC 2.0 client
+│   │       ├── McpTransport.ts        # stdio/SSE transport
+│   │       ├── McpToolAdapter.ts      # MCP tool → Tool interface adapter
+│   │       ├── McpServerManager.ts    # MCP server lifecycle management
+│   │       └── types.ts
 │   ├── services/
 │   │   ├── workspace/
 │   │   │   ├── WorkspaceService.ts    # Workspace file operations
@@ -224,10 +237,15 @@ extension.ts
         │       └── IgnoreService (services/ignore/)
         ├── ContextManager (core/context/)
         │   ├── ContextCompactor
+        │   │   └── TranscriptLogger    # Compaction event logging
         │   ├── FileContextProvider
         │   └── ConversationHistory
+        ├── TranscriptLogger (core/context/)  # Conversation event logging
+        ├── SkillRegistry (core/skills/)
+        ├── McpServerManager (core/mcp/)
         ├── DiffApplier (core/diff/)
         ├── SystemPrompt (core/prompts/)
+        │   └── RulesLoader
         └── ApprovalService (security/)
 ```
 
@@ -269,6 +287,18 @@ export function activate(context: vscode.ExtensionContext): void {
 **`core/tools/ToolRegistry.ts`** -- Registers all available tools, provides their schemas for function calling, and dispatches execution to the correct handler.
 
 **`core/context/ContextManager.ts`** -- Tracks token budget, manages conversation history truncation and compaction. Detailed in Section 7.
+
+**`core/context/TranscriptLogger.ts`** -- Appends all conversation events (user messages, assistant responses, tool calls/results, compaction, errors) to per-conversation JSONL files under `.localllm/transcripts/`. Enables recovery of details lost during context compaction.
+
+**`core/context/TranscriptSearcher.ts`** -- Searches JSONL transcript files using regex queries. Used by the `search_conversation_history` tool to let the agent recover forgotten details.
+
+**`core/skills/SkillLoader.ts`** -- Discovers and parses SKILL.md files from `.localllm/skills/` and `.claude/skills/` directories. Extracts YAML frontmatter metadata and markdown body.
+
+**`core/skills/SkillRegistry.ts`** -- In-memory registry of available skills. Provides skill lookup and LLM-friendly skill list descriptions.
+
+**`core/mcp/McpServerManager.ts`** -- Manages MCP server lifecycle (start/stop), reads configuration from `.localllm/mcp.json`, and dynamically registers/unregisters MCP tools in the ToolRegistry.
+
+**`core/prompts/RulesLoader.ts`** -- Discovers and loads project-specific rules files (`.localllm/rules.md`, `CLAUDE.md`, `.clinerules`, `.cursorrules`, etc.) and injects them into the system prompt.
 
 **`services/workspace/WorkspaceService.ts`** -- Wraps `vscode.workspace.fs` for cross-platform file read/write/search operations. Provides an abstraction layer so `core/` never imports `vscode` directly.
 
@@ -1591,6 +1621,67 @@ export class FileContextProvider {
 
     reset(): void {
         this.readFiles.clear();
+    }
+}
+```
+
+### 7.5 Conversation Transcript (Anti-Forgetting)
+
+When context compaction replaces older messages with a summary, the original details are permanently lost from the LLM's working memory. The transcript system provides a persistent log that the agent can search to recover these details.
+
+**Architecture:**
+
+```
+AgentLoop
+    │
+    ├── TranscriptLogger.log(entry)       ← Every event is appended
+    │       │
+    │       ▼
+    │   .localllm/transcripts/{convId}.jsonl
+    │       │
+    │       ▼
+    │   TranscriptSearcher.search(query)  ← Agent searches via tool
+    │       │
+    │       ▼
+    └── search_conversation_history tool  ← Returns matches to LLM
+```
+
+**JSONL Entry Types:**
+
+| Type | When | Contents |
+|------|------|----------|
+| `agent_start` | Agent run begins | conversationId |
+| `user_message` | User sends message | content |
+| `assistant_message` | LLM responds | content, toolCalls |
+| `tool_result` | Tool execution completes | toolName, toolResult, toolSuccess |
+| `context_compacted` | Auto-compaction fires | summary |
+| `agent_complete` | Agent run finishes | final message |
+| `agent_error` | Agent encounters error | error message |
+
+**Recovery Flow:**
+
+1. `ContextCompactor.compact()` summarizes old messages
+2. Summary has appended hint: "Use `search_conversation_history` to retrieve details"
+3. Agent notices it needs specific earlier details
+4. Agent calls `search_conversation_history` with a regex query
+5. `TranscriptSearcher` reads the JSONL file and returns matching entries
+6. Agent incorporates the recovered details into its response
+
+```typescript
+// src/core/context/TranscriptLogger.ts
+export class TranscriptLogger {
+    constructor(private readonly transcriptDir: string) {}
+
+    /** Append a single entry as one JSON line. */
+    log(entry: TranscriptEntry): void {
+        const filePath = this.getTranscriptPath(entry.conversationId);
+        const line = JSON.stringify(entry) + '\n';
+        fs.appendFileSync(filePath, line, 'utf8');
+    }
+
+    getTranscriptPath(conversationId: string): string {
+        const safeId = conversationId.replace(/[^a-zA-Z0-9_-]/g, '_');
+        return path.join(this.transcriptDir, `${safeId}.jsonl`);
     }
 }
 ```

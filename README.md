@@ -235,10 +235,10 @@ allowed-tools: Read, Write, Glob, Grep
 src/
 ├── core/           # ビジネスロジック（VSCode API非依存）
 │   ├── agent/      # AgentLoop, StreamProcessor, SubAgentManager
-│   ├── context/    # ContextManager, ConversationHistory, FileContextProvider
+│   ├── context/    # ContextManager, ConversationHistory, TranscriptLogger, TranscriptSearcher
 │   ├── llm/        # LlmProvider, OpenAiCompatibleProvider, backends/
 │   ├── mcp/        # McpClient, McpTransport, McpToolAdapter, McpServerManager
-│   ├── prompts/    # SystemPrompt, テンプレート
+│   ├── prompts/    # SystemPrompt, RulesLoader, テンプレート
 │   ├── skills/     # SkillLoader, SkillRegistry, SkillExecutor
 │   └── tools/      # ToolRegistry, ToolExecutor, handlers/
 ├── security/       # ApprovalService, PathValidator, CommandSanitizer

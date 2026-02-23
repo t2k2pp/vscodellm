@@ -32,16 +32,24 @@
 ## ディレクトリ構成ルール
 
 ```
-src/core/         → ビジネスロジック（VSCode非依存、ユニットテスト可能）
-src/services/     → VSCode APIラッパー
-src/webview/      → WebviewViewProvider（ホスト側）
-src/state/        → 状態管理（StateManager, Settings, ConversationStore）
-src/security/     → セキュリティ（Approval, PathValidator, CommandSanitizer）
-src/types/        → 共有型定義
-src/utils/        → ユーティリティ
-webview-ui/       → React Webviewアプリケーション（別ビルド）
-test/             → テスト基盤
-docs/             → 設計書
+src/core/              → ビジネスロジック（VSCode非依存、ユニットテスト可能）
+  ├── agent/           → AgentLoop, SubAgentManager, StreamProcessor
+  ├── context/         → ContextManager, ConversationHistory, TranscriptLogger, TranscriptSearcher
+  ├── llm/             → LlmProvider, OpenAiCompatibleProvider, backends/
+  ├── tools/           → ToolRegistry, ToolExecutor, handlers/
+  ├── prompts/         → SystemPrompt, RulesLoader, templates/
+  ├── skills/          → SkillLoader, SkillRegistry, SkillExecutor
+  ├── mcp/             → McpClient, McpServerManager, McpToolAdapter
+  └── diff/            → DiffGenerator, DiffApplier
+src/services/          → VSCode APIラッパー
+src/webview/           → WebviewViewProvider（ホスト側）
+src/state/             → 状態管理（StateManager, Settings, ConversationStore）
+src/security/          → セキュリティ（Approval, PathValidator, CommandSanitizer）
+src/types/             → 共有型定義（messages, skills, transcript）
+src/utils/             → ユーティリティ
+webview-ui/            → React Webviewアプリケーション（別ビルド）
+test/                  → テスト基盤
+docs/                  → 設計書
 ```
 
 ## 技術スタック
@@ -89,15 +97,14 @@ npm run package            # VSIXパッケージ作成
 
 ## 実装フェーズ
 
-現在: **Phase 1 - 基盤構築**
-1. プロジェクトスキャフォールド
-2. 拡張エントリポイント + サイドバーWebview
-3. 最小React Webview（チャットUI）
-4. postMessageブリッジ
-5. OpenAI互換ストリーミングLLMクライアント
-6. Ollamaバックエンドアダプター
-7. 設定管理
-8. モデル一覧取得
+実装済み: Phase 1〜6（基盤・エージェント・編集・ターミナル・コンテキスト・品質向上）
+
+追加実装済み:
+- Skills（SKILL.mdベースの再利用可能手順）
+- Sub-agents（子AgentLoopによるタスク分割）
+- MCP（Model Context Protocol）クライアント
+- プロジェクトルールファイル読み込み（`.localllm/rules.md`等）
+- 会話トランスクリプト（JSONL保存 + 検索による忘却対策）
 
 ## カスタムスキル（.claude/skills/）
 
