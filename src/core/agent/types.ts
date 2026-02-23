@@ -7,6 +7,7 @@ import type { ToolExecutor } from '../tools/ToolExecutor.js';
 import type { ToolRegistry } from '../tools/ToolRegistry.js';
 import type { ContextManager } from '../context/ContextManager.js';
 import type { ConversationHistory } from '../context/ConversationHistory.js';
+import type { TranscriptLogger } from '../context/TranscriptLogger.js';
 import type { ApprovalService } from '../../security/ApprovalService.js';
 
 /** Task states for the agent state machine. */
@@ -56,6 +57,10 @@ export interface AgentLoopDependencies {
     conversationHistory: ConversationHistory;
     approvalService: ApprovalService;
     workspaceRoot: string;
+    /** Optional: JSONL transcript logger for persistent conversation logging. */
+    transcriptLogger?: TranscriptLogger;
+    /** Optional: Conversation ID for transcript logging. */
+    conversationId?: string;
     settings: {
         maxIterations: number;
         temperature: number;

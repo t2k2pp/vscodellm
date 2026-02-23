@@ -23,3 +23,11 @@ export type {
     McpServerConfig,
     McpToolInfo,
 } from './skills.js';
+
+export type {
+    TranscriptEntry,
+    TranscriptEntryType,
+    TranscriptSearchOptions,
+    TranscriptSearchResult,
+    TranscriptInfo,
+} from './transcript.js';

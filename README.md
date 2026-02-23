@@ -14,6 +14,7 @@
 - **Markdownレンダリング** – コードブロック、ボールド、イタリックなどのリッチ表示
 - **会話履歴** – 永続化された会話の管理・切り替え
 - **自動コンテキスト圧縮** – トークン予算の80%到達時に自動でコンテキストを要約
+- **会話トランスクリプト** – 全会話をJSONLファイルに保存。圧縮で失われた詳細を検索で回復可能
 - **トークン使用量表示** – リアルタイムのコンテキスト消費率を可視化
 
 ## 対応バックエンド
@@ -79,6 +80,7 @@ npm run package    # → local-llm-agent-0.1.0.vsix を生成
 | `task_complete` | タスク完了を報告 |
 | `invoke_skill` | 登録済みスキルを呼び出し |
 | `spawn_subagent` | 子エージェントを生成してサブタスクを実行（承認必要） |
+| `search_conversation_history` | 過去の会話トランスクリプトを検索（コンテキスト圧縮後の詳細回復用） |
 | MCP動的ツール | MCPサーバーから取得したツール（承認必要） |
 
 ## プロジェクトルール
@@ -179,6 +181,40 @@ allowed-tools: Read, Write, Glob, Grep
 - 全MCPツールは承認必須（外部サーバーのため）
 - 現在対応: stdio トランスポート（SSEは今後対応）
 
+## 会話トランスクリプト
+
+エージェントの全会話（ユーザーメッセージ、アシスタント応答、ツール呼び出し・結果）がJSONLファイルとして自動的に保存されます。
+
+### 保存場所
+
+```
+.localllm/transcripts/{conversationId}.jsonl
+```
+
+### 仕組み
+
+- 会話ごとに1つのJSONLファイルが作成され、各イベントが1行のJSONとして逐次追記
+- コンテキスト圧縮（auto-compact）が発動しても、元の詳細はトランスクリプトに残存
+- エージェントは `search_conversation_history` ツールで過去の会話を自動検索可能
+- 圧縮後のsummaryに「詳細が必要な場合はトランスクリプトを検索可能」と注記が追加される
+
+### 記録されるイベント
+
+| タイプ | 説明 |
+|--------|------|
+| `agent_start` | エージェント実行開始 |
+| `user_message` | ユーザーメッセージ |
+| `assistant_message` | アシスタント応答（テキスト + ツール呼び出し） |
+| `tool_result` | ツール実行結果 |
+| `context_compacted` | コンテキスト圧縮のsummary |
+| `agent_complete` | エージェント実行完了 |
+| `agent_error` | エージェントエラー |
+
+### 注意事項
+
+- トランスクリプトにはコード内容やコマンド出力が含まれる場合があります
+- `.gitignore` に `.localllm/transcripts/` を追加することを推奨します
+
 ## コンテキストメニュー
 
 エディタでコードを選択して右クリック:
@@ -229,7 +265,7 @@ webview-ui/src/
 
 ```bash
 npm run dev           # watch モード（Extension + Webview）
-npm run test          # Vitest実行（152テスト）
+npm run test          # Vitest実行（195テスト）
 npm run build         # プロダクションビルド
 npm run lint          # ESLint
 npm run package       # VSIXパッケージ生成

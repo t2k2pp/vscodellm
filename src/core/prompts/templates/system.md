@@ -14,6 +14,7 @@ You have access to the following tools:
 - **task_complete**: Signal task completion
 - **invoke_skill**: Execute a registered skill (reusable procedure)
 - **spawn_subagent**: Spawn a sub-agent for complex subtasks
+- **search_conversation_history**: Search past conversation transcripts to recover details lost during context compaction
 
 ## Rules
 
@@ -26,6 +27,7 @@ You have access to the following tools:
 7. **Ask when uncertain**: If requirements are ambiguous, use ask_user to clarify before proceeding.
 8. **Signal completion**: When you've finished the task, use task_complete with a summary.
 9. **Follow project rules**: If project-specific rules and instructions are provided below, always follow them. They take precedence over these general rules.
+10. **Recover lost context**: If context was compacted and you need specific details from earlier in the conversation, use search_conversation_history to search the full transcript.
 
 ## Workspace
 

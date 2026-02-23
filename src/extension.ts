@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { StateManager } from './state/StateManager.js';
 import { WebviewProvider } from './webview/WebviewProvider.js';
 import { ProviderRegistry } from './core/llm/ProviderRegistry.js';
@@ -9,6 +10,8 @@ import { ToolExecutor } from './core/tools/ToolExecutor.js';
 import { ToolValidator } from './core/tools/ToolValidator.js';
 import { ContextManager } from './core/context/ContextManager.js';
 import { ConversationHistory } from './core/context/ConversationHistory.js';
+import { TranscriptLogger } from './core/context/TranscriptLogger.js';
+import { TranscriptSearcher } from './core/context/TranscriptSearcher.js';
 import { SystemPrompt } from './core/prompts/SystemPrompt.js';
 import { PathValidator } from './security/PathValidator.js';
 import { CommandSanitizer } from './security/CommandSanitizer.js';
@@ -26,6 +29,7 @@ import { AskUserTool } from './core/tools/handlers/AskUserTool.js';
 import { TaskCompleteTool } from './core/tools/handlers/TaskCompleteTool.js';
 import { InvokeSkillTool } from './core/tools/handlers/InvokeSkillTool.js';
 import { SubAgentTool } from './core/tools/handlers/SubAgentTool.js';
+import { SearchConversationHistoryTool } from './core/tools/handlers/SearchConversationHistoryTool.js';
 import { loadAll as loadAllSkills } from './core/skills/SkillLoader.js';
 import { SkillRegistry } from './core/skills/SkillRegistry.js';
 import { SubAgentManager } from './core/agent/SubAgentManager.js';
@@ -37,10 +41,13 @@ import type { DisplayMessage, AgentState } from './types/messages.js';
 // Current agent loop instance (one at a time)
 let activeAgentLoop: AgentLoop | null = null;
 
-// Shared instances for skills, sub-agents, and MCP
+// Shared instances for skills, sub-agents, MCP, and transcripts
 let skillRegistry: SkillRegistry | null = null;
 let subAgentManager: SubAgentManager | null = null;
 let mcpServerManager: McpServerManager | null = null;
+let transcriptLogger: TranscriptLogger | null = null;
+let transcriptSearcher: TranscriptSearcher | null = null;
+let searchConversationHistoryTool: SearchConversationHistoryTool | null = null;
 
 /**
  * Called when the extension is activated.
@@ -148,6 +155,17 @@ export function activate(context: vscode.ExtensionContext): void {
         });
     }
 
+    // ============================================
+    // 5d. Transcript logging & search
+    // ============================================
+    if (workspaceRoot) {
+        const transcriptDir = path.join(workspaceRoot, '.localllm', 'transcripts');
+        transcriptLogger = new TranscriptLogger(transcriptDir);
+        transcriptSearcher = new TranscriptSearcher(transcriptDir);
+        searchConversationHistoryTool = new SearchConversationHistoryTool(transcriptSearcher);
+        toolRegistry.register(searchConversationHistoryTool);
+    }
+
     const toolValidator = new ToolValidator();
     const toolExecutor = new ToolExecutor(toolRegistry, toolValidator);
 
@@ -202,6 +220,17 @@ export function activate(context: vscode.ExtensionContext): void {
             contextSafetyRatio: settings.agent.contextSafetyRatio,
             systemPrompt: systemPromptText,
         });
+
+        // Wire transcript logger into context manager for compaction logging
+        const currentConversationId = stateManager.activeConversationId || '';
+        if (transcriptLogger && currentConversationId) {
+            contextManager.setTranscriptLogger(transcriptLogger, currentConversationId);
+        }
+
+        // Update search tool's current conversation ID
+        if (searchConversationHistoryTool && currentConversationId) {
+            searchConversationHistoryTool.setCurrentConversationId(currentConversationId);
+        }
 
         // Streaming text accumulator for display
         let streamingContent = '';
@@ -290,6 +319,8 @@ export function activate(context: vscode.ExtensionContext): void {
             conversationHistory,
             approvalService,
             workspaceRoot,
+            transcriptLogger: transcriptLogger || undefined,
+            conversationId: currentConversationId || undefined,
             settings: {
                 maxIterations: settings.agent.maxIterations,
                 temperature: settings.agent.temperature,
@@ -456,4 +487,7 @@ export function deactivate(): void {
     mcpServerManager = null;
 
     skillRegistry = null;
+    transcriptLogger = null;
+    transcriptSearcher = null;
+    searchConversationHistoryTool = null;
 }

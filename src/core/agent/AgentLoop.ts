@@ -14,6 +14,7 @@
 import type { ChatMessage, CompletionRequest, ToolCall } from '../llm/types.js';
 import type { ToolContext } from '../tools/types.js';
 import type { ToolExecutionResult } from '../tools/ToolExecutor.js';
+import type { TranscriptLogger } from '../context/TranscriptLogger.js';
 import { ToolCallAccumulator, parseXmlToolCalls, stripToolCallXml } from './StreamProcessor.js';
 import {
     TaskState,
@@ -44,6 +45,8 @@ export class AgentLoop {
     private readonly onStreamChunk;
     private readonly onToolCall;
     private readonly onError;
+    private readonly transcriptLogger?: TranscriptLogger;
+    private readonly conversationId: string;
 
     constructor(deps: AgentLoopDependencies) {
         this.provider = deps.provider;
@@ -59,6 +62,8 @@ export class AgentLoop {
         this.onStreamChunk = deps.onStreamChunk;
         this.onToolCall = deps.onToolCall;
         this.onError = deps.onError;
+        this.transcriptLogger = deps.transcriptLogger;
+        this.conversationId = deps.conversationId || '';
     }
 
     /**
@@ -70,11 +75,22 @@ export class AgentLoop {
         this.iterationCount = 0;
         this.lastAssistantText = '';
 
+        // Log agent start
+        if (this.transcriptLogger && this.conversationId) {
+            this.transcriptLogger.logAgentStart(this.conversationId);
+            this.transcriptLogger.logUserMessage(this.conversationId, userMessage);
+        }
+
         // Add user message to conversation history
         this.conversationHistory.addMessage({ role: 'user', content: userMessage });
 
         try {
             await this.agentLoop();
+
+            // Log agent completion
+            if (this.transcriptLogger && this.conversationId) {
+                this.transcriptLogger.logAgentComplete(this.conversationId, this.lastAssistantText);
+            }
         } catch (error) {
             if (error instanceof AbortError || (error instanceof Error && error.name === 'AbortError')) {
                 this.setState(TaskState.CANCELLED);
@@ -83,6 +99,14 @@ export class AgentLoop {
                 this.onError.fire({ error: error as Error });
                 this.setState(TaskState.ERROR);
                 logger.error('Agent loop error', error);
+
+                // Log agent error
+                if (this.transcriptLogger && this.conversationId) {
+                    this.transcriptLogger.logAgentError(
+                        this.conversationId,
+                        (error as Error).message || String(error),
+                    );
+                }
             }
         }
 
@@ -141,6 +165,21 @@ export class AgentLoop {
                 tool_calls: toolCalls.length > 0 ? toolCalls : undefined,
             };
             this.conversationHistory.addMessage(assistantMessage);
+
+            // Log assistant message to transcript
+            if (this.transcriptLogger && this.conversationId) {
+                this.transcriptLogger.logAssistantMessage(
+                    this.conversationId,
+                    textContent || null,
+                    toolCalls.length > 0
+                        ? toolCalls.map((tc) => ({
+                              id: tc.id,
+                              name: tc.function.name,
+                              arguments: tc.function.arguments,
+                          }))
+                        : undefined,
+                );
+            }
 
             // Step 5: If there are tool calls, execute them
             if (toolCalls.length > 0) {
@@ -253,6 +292,23 @@ export class AgentLoop {
 
             const result = await this.toolExecutor.execute(toolCall, context);
             results.push(result);
+
+            // Log tool execution to transcript
+            if (this.transcriptLogger && this.conversationId) {
+                let params: Record<string, unknown> = {};
+                try {
+                    params = JSON.parse(toolCall.function.arguments);
+                } catch {
+                    // ignore parse errors
+                }
+                this.transcriptLogger.logToolResult(
+                    this.conversationId,
+                    toolCall.id,
+                    toolCall.function.name,
+                    result.output,
+                    result.success,
+                );
+            }
 
             // Notify UI of completion
             this.onToolCall.fire({

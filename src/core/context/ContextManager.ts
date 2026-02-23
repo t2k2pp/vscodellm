@@ -8,6 +8,7 @@ import type { ChatMessage, ModelInfo as LlmModelInfo } from '../llm/types.js';
 import { TokenCounter } from '../llm/TokenCounter.js';
 import { ContextCompactor } from './ContextCompactor.js';
 import type { ConversationHistory } from './ConversationHistory.js';
+import type { TranscriptLogger } from './TranscriptLogger.js';
 import type { ContextSettings } from './types.js';
 import { createLogger } from '../../utils/logger.js';
 
@@ -16,6 +17,8 @@ const logger = createLogger('ContextManager');
 export class ContextManager {
     private tokenCounter: TokenCounter;
     private compactor: ContextCompactor;
+    private transcriptLogger?: TranscriptLogger;
+    private conversationId?: string;
 
     constructor(
         private provider: LlmProvider,
@@ -23,6 +26,12 @@ export class ContextManager {
     ) {
         this.tokenCounter = TokenCounter.getInstance();
         this.compactor = new ContextCompactor(provider, settings.modelId);
+    }
+
+    /** Set transcript logger for compaction event logging. */
+    setTranscriptLogger(logger: TranscriptLogger, conversationId: string): void {
+        this.transcriptLogger = logger;
+        this.conversationId = conversationId;
     }
 
     /**
@@ -56,7 +65,12 @@ export class ContextManager {
 
         if (currentTokens > budget * 0.8) {
             logger.info(`Context budget exceeded 80%, triggering compaction`);
-            await this.compactor.compact(history, this.tokenCounter);
+            await this.compactor.compact(
+                history,
+                this.tokenCounter,
+                this.transcriptLogger,
+                this.conversationId,
+            );
         }
     }
 
