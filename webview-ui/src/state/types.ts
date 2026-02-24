@@ -132,7 +132,7 @@ export function getDefaultSettings(): ExtensionSettings {
             visionModelId: '',
         },
         agent: {
-            maxIterations: 25,
+            maxIterations: 50,
             maxOutputTokens: 4096,
             contextSafetyRatio: 0.8,
             temperature: 0.0,

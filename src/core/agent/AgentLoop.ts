@@ -9,6 +9,11 @@
  * 5. Execute tool calls (with approval if needed)
  * 6. Feed tool results back to LLM
  * 7. Repeat until completion or iteration limit
+ *
+ * Includes safeguards against silent loops:
+ * - Progress notifications shown to the user during tool-only iterations
+ * - Forced status report requests after consecutive tool-only iterations
+ * - Work summary displayed when iteration limit is reached
  */
 
 import type { ChatMessage, CompletionRequest, ToolCall } from '../llm/types.js';
@@ -26,11 +31,23 @@ import { createLogger } from '../../utils/logger.js';
 
 const logger = createLogger('AgentLoop');
 
+/**
+ * After this many consecutive tool-only iterations, insert a system message
+ * asking the LLM to report its progress to the user.
+ */
+const STATUS_REPORT_INTERVAL = 5;
+
 export class AgentLoop {
     private state: TaskState = TaskState.IDLE;
     private abortController: AbortController | null = null;
     private iterationCount = 0;
     private lastAssistantText = '';
+
+    /** Track consecutive iterations where LLM returned only tool calls (no text). */
+    private consecutiveToolOnlyCount = 0;
+
+    /** Track tool calls executed across all iterations for summary. */
+    private executedToolHistory: Array<{ name: string; iteration: number }> = [];
 
     private readonly provider;
     private readonly toolExecutor;
@@ -56,7 +73,7 @@ export class AgentLoop {
         this.conversationHistory = deps.conversationHistory;
         this.approvalService = deps.approvalService;
         this.workspaceRoot = deps.workspaceRoot;
-        this.maxIterations = deps.settings.maxIterations || 25;
+        this.maxIterations = deps.settings.maxIterations || 50;
         this.settings = deps.settings;
         this.onStateChange = deps.onStateChange;
         this.onStreamChunk = deps.onStreamChunk;
@@ -74,6 +91,8 @@ export class AgentLoop {
         this.abortController = new AbortController();
         this.iterationCount = 0;
         this.lastAssistantText = '';
+        this.consecutiveToolOnlyCount = 0;
+        this.executedToolHistory = [];
 
         // Log agent start
         if (this.transcriptLogger && this.conversationId) {
@@ -145,6 +164,24 @@ export class AgentLoop {
 
             logger.info(`Iteration ${this.iterationCount}/${this.maxIterations}`);
 
+            // --- Safeguard: progress notification for tool-only loops ---
+            if (this.consecutiveToolOnlyCount >= 2) {
+                this.onStreamChunk.fire({
+                    type: 'text',
+                    content: `\n[🔄 ステップ ${this.iterationCount}/${this.maxIterations}]\n`,
+                });
+            }
+
+            // --- Safeguard: force status report after N consecutive tool-only iterations ---
+            if (this.consecutiveToolOnlyCount >= STATUS_REPORT_INTERVAL) {
+                logger.info(`Forcing status report after ${this.consecutiveToolOnlyCount} consecutive tool-only iterations`);
+                this.conversationHistory.addMessage({
+                    role: 'user',
+                    content: '[System] ユーザーに現在の進捗状況を報告してください。これまでに何を行い、次に何をする予定かを簡潔に説明してから、作業を続けてください。',
+                });
+                this.consecutiveToolOnlyCount = 0; // Reset counter
+            }
+
             // Step 1: Check context budget, compact if needed
             await this.contextManager.ensureBudget(this.conversationHistory);
 
@@ -158,6 +195,7 @@ export class AgentLoop {
             // Step 4: Add assistant response to history
             if (textContent) {
                 this.lastAssistantText = textContent;
+                this.consecutiveToolOnlyCount = 0; // Reset: LLM produced text
             }
             const assistantMessage: ChatMessage = {
                 role: 'assistant',
@@ -183,8 +221,21 @@ export class AgentLoop {
 
             // Step 5: If there are tool calls, execute them
             if (toolCalls.length > 0) {
+                // Track tool-only iterations
+                if (!textContent) {
+                    this.consecutiveToolOnlyCount++;
+                }
+
                 this.setState(TaskState.EXECUTING_TOOLS);
                 const toolResults = await this.executeToolCalls(toolCalls);
+
+                // Record executed tools for summary
+                for (const result of toolResults) {
+                    this.executedToolHistory.push({
+                        name: result.toolName,
+                        iteration: this.iterationCount,
+                    });
+                }
 
                 // Add tool results to history
                 for (const result of toolResults) {
@@ -210,14 +261,52 @@ export class AgentLoop {
             return;
         }
 
-        // Hit iteration limit
+        // Hit iteration limit — show work summary
+        this.handleMaxIterationsReached();
+    }
+
+    // ============================================
+    // Max Iterations Handler
+    // ============================================
+
+    private handleMaxIterationsReached(): void {
         logger.warn(`Agent reached maximum iterations (${this.maxIterations})`);
-        const maxIterMsg = `\n\n⚠️ 最大反復回数（${this.maxIterations}回）に達しました。続ける場合は再度メッセージを送信してください。`;
-        this.onStreamChunk.fire({ type: 'text', content: maxIterMsg });
+
+        // Build work summary
+        const summary = this.buildWorkSummary();
+        this.onStreamChunk.fire({ type: 'text', content: summary });
+
         this.onError.fire({
             error: new Error(`最大反復回数（${this.maxIterations}回）に達しました`),
         });
         this.setState(TaskState.ERROR);
+    }
+
+    /**
+     * Build a human-readable summary of work performed across all iterations.
+     */
+    private buildWorkSummary(): string {
+        const lines: string[] = [];
+        lines.push(`\n\n---`);
+        lines.push(`⚠️ **最大反復回数（${this.maxIterations}回）に達しました**`);
+        lines.push('');
+
+        if (this.executedToolHistory.length > 0) {
+            // Group by tool name and count
+            const toolCounts = new Map<string, number>();
+            for (const entry of this.executedToolHistory) {
+                toolCounts.set(entry.name, (toolCounts.get(entry.name) || 0) + 1);
+            }
+
+            lines.push(`📋 **実行したツール（計 ${this.executedToolHistory.length} 回）:**`);
+            for (const [name, count] of toolCounts.entries()) {
+                lines.push(`  - \`${name}\`: ${count}回`);
+            }
+            lines.push('');
+        }
+
+        lines.push('💡 続ける場合は「続けてください」と送信してください。');
+        return lines.join('\n');
     }
 
     // ============================================
