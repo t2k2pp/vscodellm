@@ -272,6 +272,78 @@
     border-radius: 4px;
 }
 
+/* ---- status toast ---------------------------------------- */
+
+.status-toast {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    border-bottom: 1px solid var(--vscode-widget-border, rgba(128,128,128,0.2));
+    animation: toast-slide-in 0.2s ease-out;
+    flex-shrink: 0;
+}
+
+.status-toast--info {
+    background-color: var(--vscode-editorInfo-background, rgba(0, 120, 212, 0.1));
+    color: var(--vscode-editor-foreground);
+}
+
+.status-toast--error {
+    background-color: var(--vscode-inputValidation-errorBackground, rgba(255, 0, 0, 0.1));
+    color: var(--vscode-errorForeground, #f14c4c);
+}
+
+.status-toast--working {
+    background-color: var(--vscode-editorInfo-background, rgba(0, 120, 212, 0.1));
+    color: var(--vscode-progressBar-background, #0078d4);
+}
+
+.status-toast .codicon {
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.status-toast-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.status-toast-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    opacity: 0.6;
+    flex-shrink: 0;
+}
+
+.status-toast-close:hover {
+    opacity: 1;
+    background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+@keyframes toast-slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(-100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* ---- nav tabs -------------------------------------------- */
 
 .nav-tabs {

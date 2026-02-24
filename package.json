@@ -32,7 +32,7 @@
     "main": "./dist/extension.js",
     "contributes": {
         "viewsContainers": {
-            "activitybar": [
+            "panel": [
                 {
                     "id": "local-llm-agent",
                     "title": "Local LLM Agent",

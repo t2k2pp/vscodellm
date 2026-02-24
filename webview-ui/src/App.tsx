@@ -6,7 +6,7 @@
  * child component can read from the Zustand store.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useExtensionState } from './hooks/useExtensionState';
 import { ChatView } from './components/chat/ChatView';
 import { SettingsView } from './components/settings/SettingsView';
@@ -29,53 +29,74 @@ const tabs: TabDef[] = [
     { id: 'settings', label: 'Settings', icon: 'codicon-gear' },
 ];
 
-// SettingsView is now a full component in components/settings/SettingsView.tsx
+// ---- status toast (auto-dismissing notification) --------------------------
 
-// ---- status bar (connection indicator) ------------------------------------
+const TOAST_DURATION_MS = 5000;
 
-const StatusBar: React.FC = () => {
+const StatusToast: React.FC = () => {
     const isConnected = useAppStore((s) => s.isConnected);
     const agentState = useAppStore((s) => s.agentState);
     const errorMessage = useAppStore((s) => s.errorMessage);
 
-    let statusText: string;
-    let statusIcon: string;
+    const [visible, setVisible] = useState(false);
+    const [text, setText] = useState('');
+    const [icon, setIcon] = useState('');
+    const [variant, setVariant] = useState<'info' | 'error' | 'working'>('info');
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    if (errorMessage) {
-        statusText = errorMessage;
-        statusIcon = 'codicon-error';
-    } else if (!isConnected) {
-        statusText = 'Disconnected';
-        statusIcon = 'codicon-debug-disconnect';
-    } else {
-        switch (agentState) {
-            case 'thinking':
-                statusText = 'Thinking...';
-                statusIcon = 'codicon-loading codicon-modifier-spin';
-                break;
-            case 'executing_tools':
-                statusText = 'Executing tools...';
-                statusIcon = 'codicon-loading codicon-modifier-spin';
-                break;
-            case 'waiting_approval':
-                statusText = 'Waiting for approval';
-                statusIcon = 'codicon-shield';
-                break;
-            case 'error':
-                statusText = 'Error';
-                statusIcon = 'codicon-error';
-                break;
-            default:
-                statusText = 'Ready';
-                statusIcon = 'codicon-check';
-                break;
+    // Show toast on state changes
+    useEffect(() => {
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
         }
-    }
+
+        if (errorMessage) {
+            setText(errorMessage);
+            setIcon('codicon-error');
+            setVariant('error');
+            setVisible(true);
+            timerRef.current = setTimeout(() => setVisible(false), TOAST_DURATION_MS * 2);
+        } else if (agentState === 'thinking') {
+            setText('Thinking...');
+            setIcon('codicon-loading codicon-modifier-spin');
+            setVariant('working');
+            setVisible(true);
+            // Don't auto-dismiss while working
+        } else if (agentState === 'executing_tools') {
+            setText('Executing tools...');
+            setIcon('codicon-loading codicon-modifier-spin');
+            setVariant('working');
+            setVisible(true);
+        } else if (agentState === 'waiting_approval') {
+            setText('Waiting for approval');
+            setIcon('codicon-shield');
+            setVariant('info');
+            setVisible(true);
+        } else {
+            // idle / connected / normal state → dismiss
+            setVisible(false);
+        }
+
+        return () => {
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+            }
+        };
+    }, [errorMessage, agentState, isConnected]);
+
+    if (!visible) return null;
 
     return (
-        <div className="status-badge" style={{ margin: '0 12px 0 auto', flexShrink: 0 }}>
-            <i className={`codicon ${statusIcon}`} />
-            <span>{statusText}</span>
+        <div className={`status-toast status-toast--${variant}`}>
+            <i className={`codicon ${icon}`} />
+            <span className="status-toast-text">{text}</span>
+            <button
+                className="status-toast-close"
+                onClick={() => setVisible(false)}
+                aria-label="Dismiss"
+            >
+                <i className="codicon codicon-close" />
+            </button>
         </div>
     );
 };
@@ -104,8 +125,10 @@ export function App() {
                         {tab.label}
                     </button>
                 ))}
-                <StatusBar />
             </div>
+
+            {/* Status toast (overlays the content area) */}
+            <StatusToast />
 
             {/* Active view */}
             <div className="app-content">
