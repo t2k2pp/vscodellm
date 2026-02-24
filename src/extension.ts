@@ -183,17 +183,25 @@ export function activate(context: vscode.ExtensionContext): void {
 
         const settings = stateManager.settings;
 
-        // Ensure provider is registered
-        const providerId = settings.provider.id;
-        if (!providerRegistry.get(providerId)) {
-            providerRegistry.register({
-                id: providerId,
-                name: settings.provider.backendType,
-                backendType: settings.provider.backendType,
-                baseUrl: settings.provider.baseUrl,
-                apiKey: settings.provider.apiKey,
+        // Validate modelId before starting
+        if (!settings.provider.modelId) {
+            webviewProvider.postMessage({
+                type: 'error',
+                error: 'モデルが選択されていません。Settingsでモデルを選択してください。',
             });
+            stateManager.setAgentState('idle');
+            return;
         }
+
+        // 毎回最新の設定でProviderを再登録（register()は既存を自動dispose）
+        const providerId = settings.provider.id;
+        providerRegistry.register({
+            id: providerId,
+            name: settings.provider.backendType,
+            backendType: settings.provider.backendType,
+            baseUrl: settings.provider.baseUrl,
+            apiKey: settings.provider.apiKey,
+        });
 
         const provider = providerRegistry.get(providerId);
         if (!provider) {

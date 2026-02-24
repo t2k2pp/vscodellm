@@ -91,6 +91,24 @@ export const SettingsView: React.FC = () => {
         }
     }, [models]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // ---- auto-save modelId when user selects from dropdown -------------------
+    useEffect(() => {
+        if (selectedModelId) {
+            postMessage({
+                type: 'updateSettings',
+                settings: {
+                    provider: {
+                        id: 'default',
+                        backendType,
+                        baseUrl,
+                        apiKey,
+                        modelId: selectedModelId,
+                    },
+                },
+            });
+        }
+    }, [selectedModelId]); // eslint-disable-line react-hooks/exhaustive-deps
+
     // ---- handlers ------------------------------------------------------------
 
     const handleTestConnection = useCallback(() => {
