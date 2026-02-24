@@ -47,7 +47,8 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onCancel, agentSta
 
     const handleKeyDown = useCallback(
         (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
+            // IME変換中（日本語入力など）のEnterは無視する
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault();
                 handleSend();
             }
@@ -72,9 +73,9 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onCancel, agentSta
                 value={text}
                 onChange={handleChange}
                 onKeyDown={handleKeyDown}
-                placeholder={isBusy ? 'Agent is working...' : 'Type a message... (Enter to send)'}
+                placeholder={isBusy ? 'Agent is working...' : 'メッセージを入力... (Enter で送信)'}
                 disabled={isBusy}
-                rows={1}
+                rows={3}
                 aria-label="Chat message input"
             />
             <div className="input-actions">
@@ -89,13 +90,14 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onCancel, agentSta
                     </button>
                 ) : (
                     <button
-                        className="btn-primary"
+                        className="btn-primary input-send-btn"
                         onClick={handleSend}
                         disabled={!text.trim()}
                         title="Send message"
                         aria-label="Send"
                     >
                         <i className="codicon codicon-send" />
+                        Send
                     </button>
                 )}
             </div>
