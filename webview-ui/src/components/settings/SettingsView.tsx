@@ -65,6 +65,14 @@ export const SettingsView: React.FC = () => {
         }
     }, [isConnected]);
 
+    // ---- auto-fetch models when connection succeeds -------------------------
+    useEffect(() => {
+        if (isConnected && models.length === 0) {
+            setModelsLoading(true);
+            listModels();
+        }
+    }, [isConnected]); // eslint-disable-line react-hooks/exhaustive-deps
+
     // ---- watch errorMessage for failed connection ----------------------------
     useEffect(() => {
         if (errorMessage && connectionStatus === 'testing') {

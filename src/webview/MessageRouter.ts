@@ -170,6 +170,8 @@ export class MessageRouter implements vscode.Disposable {
             if (response.ok) {
                 stateManager.setConnected(true);
                 this.postMessage({ type: 'connectionStatus', connected: true });
+                // 接続成功時、自動的にモデル一覧を取得して送信する
+                await this._handleListModels();
             } else {
                 stateManager.setConnected(false);
                 this.postMessage({

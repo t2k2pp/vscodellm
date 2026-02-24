@@ -14,7 +14,21 @@
       "Bash(git init:*)",
       "Bash(git add:*)",
       "Bash(git rm:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(git -C /Users/osia/Documents/GenAIWork/VSCodeLLLM log --oneline --all)",
+      "Bash(git -C /Users/osia/Documents/GenAIWork/VSCodeLLLM status --short)",
+      "Bash(npm i:*)",
+      "Bash(git -C /Users/osia/Documents/GenAIWork/VSCodeLLLM add:*)",
+      "Bash(git -C:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run test:*)",
+      "Bash(npx vsce:*)",
+      "Bash(cat:*)",
+      "Bash(npx vitest:*)",
+      "Bash(git status:*)",
+      "Bash(node -e:*)"
     ]
   }
 }
