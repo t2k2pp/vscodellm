@@ -105,6 +105,7 @@ export interface ExtensionSettings {
         temperature: number;
         preferNativeToolCalling: boolean;
         agentMode: 'plan' | 'fast';
+        requestTimeoutMs: number;
     };
     approval: {
         autoApproveReads: boolean;
@@ -137,6 +138,7 @@ export function getDefaultSettings(): ExtensionSettings {
             temperature: 0.0,
             preferNativeToolCalling: true,
             agentMode: 'fast',
+            requestTimeoutMs: 600_000, // 10 minutes
         },
         approval: {
             autoApproveReads: true,

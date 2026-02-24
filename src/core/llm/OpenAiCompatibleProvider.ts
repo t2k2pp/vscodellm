@@ -28,8 +28,8 @@ import type {
 import { LlmApiError } from './types.js';
 import { TokenCounter } from './TokenCounter.js';
 
-/** Default request timeout: 5 minutes */
-const DEFAULT_TIMEOUT_MS = 300_000;
+/** Default request timeout: 10 minutes (suitable for local LLMs) */
+const DEFAULT_TIMEOUT_MS = 600_000;
 
 /** Timeout for connection tests and model listing: 10 seconds */
 const METADATA_TIMEOUT_MS = 10_000;
@@ -37,6 +37,7 @@ const METADATA_TIMEOUT_MS = 10_000;
 export class OpenAiCompatibleProvider implements LlmProvider {
     public readonly id: string;
     public readonly name: string;
+    private readonly requestTimeoutMs: number;
 
     protected readonly baseUrl: string;
     protected readonly apiKey: string;
@@ -53,6 +54,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
         this.apiKey = config.apiKey || 'not-needed';
         this.backend = backend;
         this.tokenCounter = TokenCounter.getInstance();
+        this.requestTimeoutMs = config.requestTimeoutMs ?? DEFAULT_TIMEOUT_MS;
     }
 
     // ============================================
@@ -174,7 +176,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
                 body: JSON.stringify(transformedRequest),
                 signal: AbortSignal.any([
                     abortController.signal,
-                    AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+                    AbortSignal.timeout(this.requestTimeoutMs),
                 ]),
             });
 
@@ -216,7 +218,7 @@ export class OpenAiCompatibleProvider implements LlmProvider {
                 body: JSON.stringify(transformedRequest),
                 signal: AbortSignal.any([
                     abortController.signal,
-                    AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+                    AbortSignal.timeout(this.requestTimeoutMs),
                 ]),
             });
 

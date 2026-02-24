@@ -61,13 +61,16 @@
     border-bottom-right-radius: 2px;
 }
 
-/* Assistant messages */
+/* Assistant messages - full width, no bubble */
 .message-bubble--assistant {
-    align-self: flex-start;
-    background-color: var(--vscode-editorWidget-background, var(--vscode-sideBar-background));
+    align-self: stretch;
+    max-width: 100%;
+    background-color: transparent;
     color: var(--vscode-editor-foreground);
-    border: 1px solid var(--vscode-widget-border, rgba(128,128,128,0.2));
-    border-bottom-left-radius: 2px;
+    border: none;
+    border-radius: 0;
+    padding: 8px 4px;
+    border-bottom: 1px solid var(--vscode-widget-border, rgba(128,128,128,0.1));
 }
 
 /* System messages */
@@ -314,9 +317,26 @@
 }
 
 .input-attach-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     flex-shrink: 0;
     align-self: flex-end;
     margin-bottom: 4px;
+    padding: 4px 8px;
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+    background: transparent;
+    border-radius: 3px;
+}
+
+.input-attach-btn:hover {
+    color: var(--vscode-editor-foreground);
+    background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+.input-attach-label {
+    font-size: 11px;
 }
 
 .input-attachments {

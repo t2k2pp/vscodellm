@@ -147,7 +147,8 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSend, onCancel, agentSta
                     title="ファイルを添付"
                     aria-label="Attach file"
                 >
-                    <i className="codicon codicon-attach" />
+                    <i className="codicon codicon-new-file" />
+                    <span className="input-attach-label">添付</span>
                 </button>
                 <input
                     ref={fileInputRef}

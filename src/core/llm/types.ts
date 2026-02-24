@@ -156,6 +156,8 @@ export interface ProviderConfig {
     baseUrl: string;
     /** API key (empty or "not-needed" for local servers) */
     apiKey: string;
+    /** Request timeout in milliseconds (default: 10 min) */
+    requestTimeoutMs?: number;
 }
 
 // ============================================

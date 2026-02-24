@@ -212,10 +212,12 @@ export class AgentLoop {
 
         // Hit iteration limit
         logger.warn(`Agent reached maximum iterations (${this.maxIterations})`);
+        const maxIterMsg = `\n\n⚠️ 最大反復回数（${this.maxIterations}回）に達しました。続ける場合は再度メッセージを送信してください。`;
+        this.onStreamChunk.fire({ type: 'text', content: maxIterMsg });
         this.onError.fire({
-            error: new Error(`Agent reached maximum iterations (${this.maxIterations})`),
+            error: new Error(`最大反復回数（${this.maxIterations}回）に達しました`),
         });
-        this.setState(TaskState.COMPLETED);
+        this.setState(TaskState.ERROR);
     }
 
     // ============================================

@@ -224,6 +224,7 @@ export function activate(context: vscode.ExtensionContext): void {
             backendType: settings.provider.backendType,
             baseUrl: settings.provider.baseUrl,
             apiKey: settings.provider.apiKey,
+            requestTimeoutMs: settings.agent.requestTimeoutMs,
         });
 
         const provider = providerRegistry.get(providerId);
