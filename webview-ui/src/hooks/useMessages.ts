@@ -11,9 +11,9 @@ import { postMessage } from '../vscode';
 import type { ExtensionSettings } from '../state/types';
 
 export function useMessages() {
-    const sendMessage = useCallback((text: string) => {
-        if (!text.trim()) return;
-        postMessage({ type: 'sendMessage', text: text.trim() });
+    const sendMessage = useCallback((text: string, attachments?: Array<{ name: string; mimeType: string; data: string }>) => {
+        if (!text.trim() && (!attachments || attachments.length === 0)) return;
+        postMessage({ type: 'sendMessage', text: text.trim(), attachments });
     }, []);
 
     const cancelTask = useCallback(() => {

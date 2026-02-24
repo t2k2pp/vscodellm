@@ -96,6 +96,7 @@ export interface ExtensionSettings {
         baseUrl: string;
         apiKey: string;
         modelId: string;
+        visionModelId: string;
     };
     agent: {
         maxIterations: number;
@@ -103,6 +104,7 @@ export interface ExtensionSettings {
         contextSafetyRatio: number;
         temperature: number;
         preferNativeToolCalling: boolean;
+        agentMode: 'plan' | 'fast';
     };
     approval: {
         autoApproveReads: boolean;
@@ -126,6 +128,7 @@ export function getDefaultSettings(): ExtensionSettings {
             baseUrl: 'http://localhost:11434',
             apiKey: '',
             modelId: '',
+            visionModelId: '',
         },
         agent: {
             maxIterations: 25,
@@ -133,6 +136,7 @@ export function getDefaultSettings(): ExtensionSettings {
             contextSafetyRatio: 0.8,
             temperature: 0.0,
             preferNativeToolCalling: true,
+            agentMode: 'fast',
         },
         approval: {
             autoApproveReads: true,
@@ -167,7 +171,7 @@ export interface SyncableState {
 // ============================================
 
 export type WebviewToExtensionMessage =
-    | { type: 'sendMessage'; text: string }
+    | { type: 'sendMessage'; text: string; attachments?: Attachment[] }
     | { type: 'cancelTask' }
     | { type: 'approveAction'; approvalId: string }
     | { type: 'rejectAction'; approvalId: string }
@@ -217,4 +221,14 @@ export interface TokenUsageInfo {
 export interface PendingApproval extends ApprovalRequest {
     // Extends ApprovalRequest as-is; kept as a separate interface
     // so the UI can add transient fields in the future.
+}
+
+// ============================================
+// Attachment
+// ============================================
+
+export interface Attachment {
+    name: string;
+    mimeType: string;
+    data: string; // base64
 }

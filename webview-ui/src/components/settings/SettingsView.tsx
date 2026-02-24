@@ -38,6 +38,7 @@ export const SettingsView: React.FC = () => {
     const [baseUrl, setBaseUrl] = useState(storeSettings.provider.baseUrl);
     const [apiKey, setApiKey] = useState(storeSettings.provider.apiKey);
     const [selectedModelId, setSelectedModelId] = useState(storeSettings.provider.modelId);
+    const [visionModelId, setVisionModelId] = useState(storeSettings.provider.visionModelId);
     const [temperature, setTemperature] = useState(storeSettings.agent.temperature);
     const [maxIterations, setMaxIterations] = useState(storeSettings.agent.maxIterations);
 
@@ -103,6 +104,7 @@ export const SettingsView: React.FC = () => {
                         baseUrl,
                         apiKey,
                         modelId: selectedModelId,
+                        visionModelId,
                     },
                 },
             });
@@ -122,6 +124,7 @@ export const SettingsView: React.FC = () => {
                     baseUrl,
                     apiKey,
                     modelId: selectedModelId,
+                    visionModelId,
                 },
             },
         });
@@ -140,6 +143,7 @@ export const SettingsView: React.FC = () => {
                     baseUrl,
                     apiKey,
                     modelId: selectedModelId,
+                    visionModelId,
                 },
             },
         });
@@ -172,6 +176,7 @@ export const SettingsView: React.FC = () => {
                 baseUrl,
                 apiKey,
                 modelId: selectedModelId,
+                visionModelId,
             },
             agent: {
                 ...storeSettings.agent,

@@ -238,12 +238,18 @@
     color: var(--vscode-descriptionForeground);
 }
 
-.btn-danger {
+.history-delete-btn {
     color: var(--vscode-testing-iconFailed, #f14c4c);
+    opacity: 0.4;
+    transition: opacity 0.15s;
 }
 
-.btn-danger:hover {
-    background-color: rgba(241, 76, 76, 0.1);
+.history-item:hover .history-delete-btn {
+    opacity: 1;
+}
+
+.history-delete-btn:hover {
+    background-color: rgba(241, 76, 76, 0.15);
 }
 
 /* ---- expanded tool call display -------------------------- */

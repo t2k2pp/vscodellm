@@ -97,6 +97,26 @@ export function activate(context: vscode.ExtensionContext): void {
     const commandSanitizer = new CommandSanitizer(stateManager.settings);
     const approvalService = new ApprovalService(stateManager.settings, stateManager, webviewProvider);
 
+    // Fast モードの場合、承認設定を一時的にオーバーライド
+    const updateApprovalForMode = () => {
+        const currentSettings = stateManager.settings;
+        if (currentSettings.agent.agentMode === 'fast') {
+            approvalService.updateSettings({
+                ...currentSettings,
+                approval: {
+                    ...currentSettings.approval,
+                    autoApproveReads: true,
+                    autoApproveWrites: true,
+                    autoApproveCommands: true,
+                    allowedCommands: ['.*'], // Allow all commands in fast mode
+                },
+            });
+        } else {
+            approvalService.updateSettings(currentSettings);
+        }
+    };
+    updateApprovalForMode();
+
     // ============================================
     // 5. Register tools
     // ============================================
@@ -182,6 +202,9 @@ export function activate(context: vscode.ExtensionContext): void {
         activeAgentLoop?.cancel();
 
         const settings = stateManager.settings;
+
+        // Apply Fast/Plan mode to approval service
+        updateApprovalForMode();
 
         // Validate modelId before starting
         if (!settings.provider.modelId) {

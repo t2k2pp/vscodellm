@@ -229,15 +229,150 @@
     margin-top: 4px;
 }
 
+/* ---- chat toolbar ---------------------------------------- */
+
+.chat-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-top: 1px solid var(--vscode-panel-border, var(--vscode-widget-border, rgba(128,128,128,0.2)));
+    background-color: var(--vscode-editor-background);
+    flex-shrink: 0;
+}
+
+.chat-toolbar-modes {
+    display: flex;
+    gap: 2px;
+    background-color: var(--vscode-input-background);
+    border-radius: 4px;
+    padding: 2px;
+}
+
+.chat-toolbar-mode-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    font-size: 11px;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--vscode-descriptionForeground);
+    transition: all 0.15s;
+}
+
+.chat-toolbar-mode-btn:hover:not(.chat-toolbar-mode-btn--active) {
+    color: var(--vscode-editor-foreground);
+}
+
+.chat-toolbar-mode-btn--active {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    font-weight: 600;
+}
+
+.chat-toolbar-mode-btn .codicon {
+    font-size: 12px;
+}
+
+.chat-toolbar-model {
+    flex: 1;
+    min-width: 0;
+}
+
+.chat-toolbar-model-select {
+    width: 100%;
+    padding: 3px 6px;
+    font-size: 11px;
+    background-color: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border, transparent);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+
+.chat-toolbar-model-select:focus {
+    border-color: var(--vscode-focusBorder);
+}
+
 /* ---- input area ------------------------------------------ */
 
 .input-area {
     display: flex;
-    align-items: flex-end;
+    flex-direction: column;
     gap: 6px;
     padding: 8px 12px;
     border-top: 1px solid var(--vscode-panel-border, var(--vscode-widget-border, rgba(128,128,128,0.2)));
     background-color: var(--vscode-editor-background);
+}
+
+.input-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.input-attach-btn {
+    flex-shrink: 0;
+    align-self: flex-end;
+    margin-bottom: 4px;
+}
+
+.input-attachments {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.input-attachment-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 6px;
+    border-radius: 4px;
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border, rgba(128,128,128,0.2));
+    font-size: 11px;
+    max-width: 180px;
+}
+
+.input-attachment-thumb {
+    width: 24px;
+    height: 24px;
+    object-fit: cover;
+    border-radius: 2px;
+}
+
+.input-attachment-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.input-attachment-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    background: transparent;
+    color: var(--vscode-descriptionForeground);
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.input-attachment-remove:hover {
+    color: var(--vscode-errorForeground, #f14c4c);
+    background-color: rgba(241, 76, 76, 0.1);
+}
+
+.input-attachment-remove .codicon {
+    font-size: 12px;
 }
 
 .input-area textarea {

@@ -24,10 +24,12 @@ export const HistoryItem: React.FC<HistoryItemProps> = ({ conversation, onLoad, 
                     {conversation.messageCount} message{conversation.messageCount !== 1 ? 's' : ''}
                 </span>
                 <button
-                    className="btn btn-icon btn-danger"
+                    className="btn-icon history-delete-btn"
                     onClick={(e) => {
                         e.stopPropagation();
-                        onDelete();
+                        if (window.confirm('この会話を削除しますか？')) {
+                            onDelete();
+                        }
                     }}
                     title="Delete conversation"
                 >

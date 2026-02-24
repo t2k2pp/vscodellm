@@ -61,7 +61,7 @@ export class MessageRouter implements vscode.Disposable {
 
         switch (message.type) {
             case 'sendMessage':
-                await this._handleSendMessage(message.text);
+                await this._handleSendMessage(message.text, message.attachments);
                 break;
 
             case 'cancelTask':
@@ -114,20 +114,41 @@ export class MessageRouter implements vscode.Disposable {
      * Handle user sending a chat message.
      * Adds the user message to state and fires the event for AgentLoop.
      */
-    private async _handleSendMessage(text: string): Promise<void> {
+    private async _handleSendMessage(
+        text: string,
+        attachments?: Array<{ name: string; mimeType: string; data: string }>,
+    ): Promise<void> {
         const stateManager = StateManager.instance;
+
+        // Build content with attachment info
+        let content = text;
+        if (attachments && attachments.length > 0) {
+            const attachmentInfo = attachments.map((a) => {
+                if (a.mimeType.startsWith('image/')) {
+                    return `[添付画像: ${a.name}]`;
+                }
+                // For text files, decode and include content
+                try {
+                    const decoded = Buffer.from(a.data, 'base64').toString('utf-8');
+                    return `[添付ファイル: ${a.name}]\n\`\`\`\n${decoded}\n\`\`\``;
+                } catch {
+                    return `[添付ファイル: ${a.name}]`;
+                }
+            });
+            content = content + '\n\n' + attachmentInfo.join('\n\n');
+        }
 
         // Add user message to display state
         const userMessage: DisplayMessage = {
             id: _generateId(),
             role: 'user',
-            content: text,
+            content: text + (attachments?.length ? ` (📎 ${attachments.length} file${attachments.length > 1 ? 's' : ''})` : ''),
             timestamp: Date.now(),
         };
         stateManager.addMessage(userMessage);
 
         // Fire the event so the AgentLoop picks it up
-        this._onUserMessage.fire(text);
+        this._onUserMessage.fire(content);
     }
 
     /**
